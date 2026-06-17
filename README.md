@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MySuper.gr - Έξυπνη Σύγκριση Τιμών Supermarket
 
-## Getting Started
+Το **MySuper.gr** είναι μια σύγχρονη, γρήγορη και εύχρηστη εφαρμογή ιστού (web application) για τη σύγκριση τιμών προϊόντων στα μεγαλύτερα σούπερ μάρκετ της Ελλάδας (Σκλαβενίτης, Lidl, ΑΒ Βασιλόπουλος, Μασούτης, My Market, Κρητικός). 
 
-First, run the development server:
+Η εφαρμογή συνδέεται απευθείας με τα επίσημα δεδομένα του **e-Katanalotis (posokanei.gov.gr)**, επιτρέποντας στους καταναλωτές να οργανώνουν τη λίστα αγορών τους και να βρίσκουν την οικονομικότερη λύση.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🌟 Κύρια Χαρακτηριστικά
+
+*   **🔍 Έξυπνη Αναζήτηση & Κατηγοριοποίηση**: Αναζήτηση προϊόντων σε πραγματικό χρόνο με φιλτράρισμα ανά κύριες κατηγορίες και υποκατηγορίες.
+*   **📊 Πίνακας Σύγκρισης Τιμών (Matrix)**: Δείτε με μια ματιά τις τιμές των αγαπημένων σας προϊόντων σε όλα τα διαθέσιμα σούπερ μάρκετ, με επισήμανση της φθηνότερης επιλογής.
+*   **🛒 Βελτιστοποίηση Καλαθιού**:
+    *   **Αγορά από 1 Σούπερ Μάρκετ**: Υπολογισμός του συνολικού κόστους για όλα τα προϊόντα σε ένα μόνο κατάστημα (εμφανίζεται μόνο αν το κατάστημα διαθέτει το 100% των προϊόντων της λίστας σας).
+    *   **Βέλτιστος Διαμοιρασμός (Split-Trip)**: Διαχωρισμός της λίστας στα καταστήματα με τις χαμηλότερες τιμές ανά προϊόν για τη μέγιστη δυνατή εξοικονόμηση.
+*   **🗺️ Εύρεση Πλησιέστερου Καταστήματος (Χάρτης)**: Με ένα κλικ πάνω σε οποιοδήποτε σούπερ μάρκετ, η εφαρμογή εντοπίζει την τοποθεσία σας και εμφανίζει το πλησιέστερο φυσικό κατάστημα σε ενσωματωμένο χάρτη της Google, με δυνατότητα άμεσης πλοήγησης (GPS directions).
+*   **💬 Κοινοποίηση Λίστας**: Δυνατότητα αντιγραφής της λίστας αγορών σε απλή μορφή κειμένου (κατάλληλη για αποστολή σε Viber, WhatsApp, SMS) ή παραγωγής Web Link για εισαγωγή της λίστας σε άλλη συσκευή.
+*   **🌓 Μοντέρνος Σχεδιασμός**: Responsive UI με απαλά border εφέ, frosted glass αισθητική και υποστήριξη manual εναλλαγής μεταξύ Light και Dark theme.
+
+---
+
+## 🛠️ Τεχνολογίες (Tech Stack)
+
+*   **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+*   **Γλώσσα**: [TypeScript](https://www.typescriptlang.org/)
+*   **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+*   **Εικονίδια**: [Lucide React](https://lucide.dev/)
+*   **API Proxy**: Custom API Route (`src/app/api/[...path]/route.ts`) για την παράκαμψη των περιορισμών CORS κατά την επικοινωνία με την κυβερνητική πλατφόρμα.
+
+---
+
+## 📁 Δομή Φακέλων
+
+```text
+mysuper-app/
+├── src/
+│   └── app/
+│       ├── api/               # API Proxy (CORS bypass)
+│       ├── globals.css        # Tailwind v4 configuration & Themes
+│       ├── layout.tsx         # Root Layout
+│       └── page.tsx           # Κύριο Application Shell & Logic
+├── public/                    # Στατικά αρχεία (εικόνες, logos)
+├── package.json               # Dependencies & scripts
+└── README.md                  # Τεκμηρίωση εφαρμογής
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🔒 Ασφάλεια & CORS Proxy
+Η εφαρμογή χρησιμοποιεί έναν εσωτερικό proxy (Next.js Route Handler) για να προωθεί τα αιτήματα αναζήτησης στο `api.posokanei.gov.gr` προσθέτοντας τα απαραίτητα `Origin` και `Referer` headers, επιτρέποντας έτσι την απρόσκοπτη λειτουργία της χωρίς CORS σφάλματα στον browser.
