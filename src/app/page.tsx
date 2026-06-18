@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
     Search, Moon, Sun, Heart, Trash2, Share2, Copy, Link as LinkIcon, 
-    X, Sparkles, ShoppingBag, TrendingUp, ChevronRight, ChevronDown, 
+    X, Sparkles, ShoppingBag, TrendingUp, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid,
     Store, Percent, Trophy, Info, PiggyBank, RefreshCw, Menu, ShoppingBasket,
     MapPin, Home
 } from 'lucide-react';
@@ -120,8 +120,35 @@ export default function MySuperApp() {
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedCategoryId, setSelectedCategoryId] = useState('');
-    const [selectedSubcategoryId, setSelectedSubcategoryId] = useState('');
+    const [categoryPath, setCategoryPath] = useState<string[]>([]);
+    const [showAllProductsInCategory, setShowAllProductsInCategory] = useState(false);
+
+    const selectedCategoryId = categoryPath[0] || '';
+    const selectedSubcategoryId = categoryPath.length > 1 ? categoryPath[categoryPath.length - 1] : '';
+
+    const getCurrentCategoryNode = (path: string[], tree: CategoryNode[]): CategoryNode | null => {
+        if (path.length === 0) return null;
+        let currentNode: CategoryNode | null = null;
+        let currentList = tree;
+        for (const id of path) {
+            const found = currentList.find(node => node.category_id === id);
+            if (!found) return null;
+            currentNode = found;
+            currentList = found.children || [];
+        }
+        return currentNode;
+    };
+
+    const currentCategoryNode = useMemo(() => {
+        return getCurrentCategoryNode(categoryPath, categories);
+    }, [categoryPath, categories]);
+
+    const hasSubcategories = useMemo(() => {
+        return currentCategoryNode && currentCategoryNode.children && currentCategoryNode.children.length > 0;
+    }, [currentCategoryNode]);
+
+    const shouldShowSubcategoryGrid = !searchTerm && hasSubcategories && !showAllProductsInCategory;
+
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [sortBy, setSortBy] = useState('priceAsc');
@@ -268,7 +295,8 @@ export default function MySuperApp() {
 
     // Fetch Products when filters change
     useEffect(() => {
-        if (!searchTerm && !selectedCategoryId && !selectedSubcategoryId) {
+        // If we are on home screen or showing the subcategory grid, don't fetch products
+        if (isHomeScreen || (hasSubcategories && !showAllProductsInCategory && !searchTerm)) {
             setProducts([]);
             return;
         }
@@ -410,18 +438,18 @@ export default function MySuperApp() {
 
     const resetFilters = () => {
         setSearchTerm('');
-        setSelectedCategoryId('');
-        setSelectedSubcategoryId('');
+        setCategoryPath([]);
+        setShowAllProductsInCategory(false);
         setCurrentPage(1);
         setActiveTab('products');
         setIsSidebarOpen(false);
     };
 
-    const isHomeScreen = !searchTerm && !selectedCategoryId && !selectedSubcategoryId;
+    const isHomeScreen = !searchTerm && categoryPath.length === 0;
 
     const handleCategoryClick = (catId: string) => {
-        setSelectedCategoryId(catId);
-        setSelectedSubcategoryId('');
+        setCategoryPath([catId]);
+        setShowAllProductsInCategory(false);
         setCurrentPage(1);
         setActiveTab('products');
         setOpenCategories(prev => ({
@@ -433,28 +461,22 @@ export default function MySuperApp() {
     const getBreadcrumbs = () => {
         const steps = [{ name: 'Αρχική', onClick: resetFilters }];
         
-        if (selectedCategoryId) {
-            const cat = categories.find(c => c.category_id === selectedCategoryId);
+        let currentList = categories;
+        const pathAcc: string[] = [];
+        for (const id of categoryPath) {
+            const cat = currentList.find(c => c.category_id === id);
             if (cat) {
+                pathAcc.push(id);
+                const snapshotPath = [...pathAcc];
                 steps.push({
                     name: cat.name,
                     onClick: () => {
-                        setSelectedSubcategoryId('');
+                        setCategoryPath(snapshotPath);
+                        setShowAllProductsInCategory(false);
                         setCurrentPage(1);
                     }
                 });
-                
-                if (selectedSubcategoryId) {
-                    const sub = cat.children?.find(s => s.category_id === selectedSubcategoryId);
-                    if (sub) {
-                        steps.push({
-                            name: sub.name,
-                            onClick: () => {
-                                setCurrentPage(1);
-                            }
-                        });
-                    }
-                }
+                currentList = cat.children || [];
             }
         }
         
@@ -487,15 +509,15 @@ export default function MySuperApp() {
             ...prev,
             [catId]: !prev[catId]
         }));
-        setSelectedCategoryId(catId);
-        setSelectedSubcategoryId('');
+        setCategoryPath([catId]);
+        setShowAllProductsInCategory(false);
         setCurrentPage(1);
     };
 
     const selectSubcategory = (e: React.MouseEvent, parentId: string, subId: string) => {
         e.stopPropagation();
-        setSelectedCategoryId(parentId);
-        setSelectedSubcategoryId(subId);
+        setCategoryPath([parentId, subId]);
+        setShowAllProductsInCategory(false);
         setCurrentPage(1);
         setIsSidebarOpen(false);
     };
@@ -1070,42 +1092,98 @@ export default function MySuperApp() {
                                     )}
 
                                     {/* Subcategory Filter Pills */}
-                                    {selectedCategoryId && (
-                                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none items-center">
+                                    {!searchTerm && categoryPath.length > 0 && (
+                                        <div className="flex gap-2 overflow-x-auto pb-3 scrollbar-none items-center">
                                             <button
                                                 onClick={() => {
-                                                    setSelectedSubcategoryId('');
+                                                    if (categoryPath.length === 1) {
+                                                        resetFilters();
+                                                    } else {
+                                                        setCategoryPath(prev => prev.slice(0, -1));
+                                                        setShowAllProductsInCategory(false);
+                                                    }
                                                     setCurrentPage(1);
                                                 }}
-                                                className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                                                    !selectedSubcategoryId 
-                                                        ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/20' 
-                                                        : 'bg-input-custom hover:bg-input-custom text-slate-650 dark:text-slate-300'
-                                                }`}
+                                                className="px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 bg-input-custom hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-300 flex items-center gap-1"
                                             >
-                                                Όλα ({categories.find(c => c.category_id === selectedCategoryId)?.total_product_count || 0})
+                                                <ChevronLeft className="w-3.5 h-3.5" />
+                                                <span>Πίσω</span>
                                             </button>
-                                            {categories.find(c => c.category_id === selectedCategoryId)?.children?.map(sub => (
-                                                <button
-                                                    key={sub.category_id}
-                                                    onClick={() => {
-                                                        setSelectedSubcategoryId(sub.category_id);
-                                                        setCurrentPage(1);
-                                                    }}
-                                                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
-                                                        selectedSubcategoryId === sub.category_id
-                                                            ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/20'
-                                                            : 'bg-input-custom hover:bg-input-custom text-slate-650 dark:text-slate-300'
-                                                    }`}
-                                                >
-                                                    {sub.name} ({sub.total_product_count || 0})
-                                                </button>
-                                            ))}
+                                            
+                                            {(() => {
+                                                const parentPath = categoryPath.length <= 1 ? [] : categoryPath.slice(0, -1);
+                                                const parentNode = categoryPath.length <= 1 ? null : getCurrentCategoryNode(parentPath, categories);
+                                                const siblings = parentNode ? (parentNode.children || []) : categories;
+                                                const activeId = categoryPath[categoryPath.length - 1];
+                                                
+                                                return siblings.map(sub => (
+                                                    <button
+                                                        key={sub.category_id}
+                                                        onClick={() => {
+                                                            const newPath = [...parentPath, sub.category_id];
+                                                            setCategoryPath(newPath);
+                                                            setShowAllProductsInCategory(false);
+                                                            setCurrentPage(1);
+                                                        }}
+                                                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer shrink-0 ${
+                                                            activeId === sub.category_id
+                                                                ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/20'
+                                                                : 'bg-input-custom hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-300'
+                                                        }`}
+                                                    >
+                                                        {sub.name} ({sub.total_product_count || 0})
+                                                    </button>
+                                                ));
+                                            })()}
                                         </div>
                                     )}
 
-                                    {/* Results listing */}
-                                    {products.length === 0 ? (
+                                    {shouldShowSubcategoryGrid ? (
+                                        /* Nested Subcategories Grid */
+                                        <div className="space-y-6">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border-custom pb-4">
+                                                <div>
+                                                    <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                                        {currentCategoryNode?.name}
+                                                    </h2>
+                                                    <p className="text-xs text-slate-455 mt-1 font-medium">
+                                                        Επιλέξτε μια υποκατηγορία για να δείτε τα προϊόντα
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => setShowAllProductsInCategory(true)}
+                                                    className="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white text-xs font-bold rounded-xl shadow transition cursor-pointer flex items-center gap-2 self-start sm:self-auto"
+                                                >
+                                                    <LayoutGrid className="w-4 h-4" />
+                                                    <span>Προβολή Όλων των Προϊόντων ({currentCategoryNode?.total_product_count || 0})</span>
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                                {currentCategoryNode?.children?.map(sub => (
+                                                    <div
+                                                        key={sub.category_id}
+                                                        onClick={() => {
+                                                            setCategoryPath(prev => [...prev, sub.category_id]);
+                                                            setShowAllProductsInCategory(false);
+                                                            setCurrentPage(1);
+                                                        }}
+                                                        className="group bg-card-bg border border-border-custom hover:border-indigo-500/50 p-5 rounded-2xl shadow-sm hover:shadow-md transition duration-300 cursor-pointer flex items-center justify-between"
+                                                    >
+                                                        <div className="min-w-0 pr-4">
+                                                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-500 transition truncate">
+                                                                {sub.name}
+                                                            </h4>
+                                                            <p className="text-xs text-slate-455 mt-1 font-medium">
+                                                                {sub.total_product_count || 0} προϊόντα
+                                                            </p>
+                                                        </div>
+                                                        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-1 transition duration-300 shrink-0" />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ) : products.length === 0 ? (
                                         <div className="h-[40vh] flex flex-col items-center justify-center text-center max-w-sm mx-auto">
                                             {loadingProducts ? (
                                                 <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
