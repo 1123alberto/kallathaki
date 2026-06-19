@@ -77,7 +77,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: 
 
     // Start scanning when camera is selected
     useEffect(() => {
-        if (!isOpen || !selectedCameraId || isScanning) return;
+        if (!isOpen || !selectedCameraId) return;
 
         startScanning(selectedCameraId);
     }, [isOpen, selectedCameraId]);
@@ -115,6 +115,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: 
                         return { x: (width - boxWidth) / 2, y: (height - boxHeight) / 2, width: boxWidth, height: boxHeight };
                     },
                     videoConstraints: {
+                        deviceId: { exact: cameraId },
                         width: { min: 640, ideal: 1280, max: 1920 },
                         height: { min: 480, ideal: 720, max: 1080 },
                         aspectRatio: 1.7777777778
