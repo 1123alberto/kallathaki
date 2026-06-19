@@ -97,7 +97,10 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: 
                 Html5QrcodeSupportedFormats.UPC_E,
                 Html5QrcodeSupportedFormats.QR_CODE
             ],
-            verbose: false
+            verbose: false,
+            experimentalFeatures: {
+                useBarCodeDetectorIfSupported: true
+            }
         });
         html5QrCodeRef.current = html5QrCode;
 
@@ -236,11 +239,17 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: 
                     {/* Viewfinder Scanning Grid Overlays */}
                     {isScanning && !errorMsg && (
                         <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-                            {/* Masking overlay for barcode area */}
-                            <div className="absolute inset-0 bg-black/40" />
-                            
+                            {/* Pulsing automatic scanning badge */}
+                            <div className="absolute top-4 left-4 z-25 flex items-center gap-1.5 bg-indigo-600 text-white text-[9px] font-extrabold px-2.5 py-1.5 rounded-full uppercase tracking-widest shadow-lg border border-indigo-400/20">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                <span>ΑΥΤΟΜΑΤΗ ΑΝΙΧΝΕΥΣΗ</span>
+                            </div>
+
                             {/* Active rectangular barcode viewfinder border */}
-                            <div className="relative z-10 w-[85%] max-w-[320px] h-[160px] border-2 border-indigo-400/80 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] overflow-hidden">
+                            <div className="relative z-10 w-[85%] max-w-[320px] h-[160px] border-2 border-indigo-400/80 rounded-2xl shadow-[0_0_0_9999px_rgba(0,0,0,0.55)] overflow-hidden">
                                 
                                 {/* Scanning Laser Animation */}
                                 <div className="absolute left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent shadow-[0_0_8px_red] animate-scan-laser" />
@@ -252,8 +261,8 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: 
                                 <div className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-white rounded-br-md" />
                             </div>
 
-                            <p className="absolute bottom-4 text-center text-white text-[11px] font-bold tracking-wide bg-black/60 px-3 py-1.5 rounded-full z-10">
-                                Τοποθετήστε το barcode στο κέντρο
+                            <p className="absolute bottom-4 text-center text-white text-[11px] font-bold tracking-wide bg-slate-900/90 px-3.5 py-2 rounded-full border border-slate-700/50 shadow-md z-10">
+                                Ευθυγραμμίστε το barcode στο πλαίσιο • Σαρώνει αυτόματα
                             </p>
                         </div>
                     )}
