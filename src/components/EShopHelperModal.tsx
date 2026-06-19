@@ -126,7 +126,7 @@ export default function EShopHelperModal({ isOpen, onClose, products, retailer }
             case 'kritikos':
                 return `https://eshop.kritikos-sm.gr/anazitisi?q=${encodeURIComponent(query)}`;
             case 'masoutis':
-                return `https://eshop.masoutis.gr/search?q=${encodeURIComponent(query)}`;
+                return `https://www.masoutis.gr/categories/index/search?text=${encodeURIComponent(query)}`;
             case 'lidl':
                 return `https://www.lidl.gr/search?q=${encodeURIComponent(query)}`;
             default:
