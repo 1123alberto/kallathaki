@@ -92,6 +92,7 @@ export default function MySuperApp() {
     const [activeBasketIds, setActiveBasketIds] = useState<string[]>([]);
     const [favoritesSubTab, setFavoritesSubTab] = useState<'pantry' | 'basket'>('pantry');
     const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [barcodeCache, setBarcodeCache] = useState<Record<string, Product>>({});
 
     const activeBasketProducts = useMemo(() => {
         return favorites.filter(p => activeBasketIds.includes(p.id));
@@ -450,6 +451,13 @@ export default function MySuperApp() {
     };
 
     const handleBarcodeScanSuccess = async (barcode: string) => {
+        // Check client-side memory cache first to prevent rate limiting
+        if (barcodeCache[barcode]) {
+            setSelectedProduct(barcodeCache[barcode]);
+            setIsDetailOpen(true);
+            return;
+        }
+
         setLoadingProducts(true);
         try {
             const res = await fetch(`/api/products/barcode/${barcode}?countries=GR&include_tax=true`);
@@ -457,6 +465,11 @@ export default function MySuperApp() {
                 const data = await res.json();
                 if (data) {
                     const sanitized = sanitizeProduct(data);
+                    // Update cache
+                    setBarcodeCache(prev => ({
+                        ...prev,
+                        [barcode]: sanitized
+                    }));
                     setSelectedProduct(sanitized);
                     setIsDetailOpen(true);
                     return;

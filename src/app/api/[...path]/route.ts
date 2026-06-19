@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// In-memory cache to bypass Gov API rate-limiting (429)
+const apiCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes cache time-to-live
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
@@ -8,6 +12,12 @@ export async function GET(
   const searchParams = req.nextUrl.searchParams.toString();
   const targetPath = path.join('/');
   const url = `https://api.posokanei.gov.gr/${targetPath}${searchParams ? `?${searchParams}` : ''}`;
+
+  // Check cache first
+  const cached = apiCache.get(url);
+  if (cached && (Date.now() - cached.timestamp < CACHE_TTL)) {
+    return NextResponse.json(cached.data);
+  }
 
   try {
     const response = await fetch(url, {
@@ -19,13 +29,27 @@ export async function GET(
         'Referer': 'https://posokanei.gov.gr/'
       }
     });
+
     if (!response.ok) {
+      // If Gov API is rate limiting (429) or erroring, serve stale cache if available
+      if (cached) {
+        console.warn(`Gov API returned ${response.status}, serving stale cache fallback for ${url}`);
+        return NextResponse.json(cached.data);
+      }
       return NextResponse.json({ error: `Gov API returned ${response.status}` }, { status: response.status });
     }
+
     const data = await response.json();
+    
+    // Save to cache
+    apiCache.set(url, { data, timestamp: Date.now() });
+    
     return NextResponse.json(data);
   } catch (error) {
     console.error("Proxy GET error", error);
+    if (cached) {
+      return NextResponse.json(cached.data);
+    }
     return NextResponse.json({ error: 'Failed to fetch from Gov API' }, { status: 500 });
   }
 }
