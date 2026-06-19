@@ -72,10 +72,10 @@ mysuper-app/
 2. **Προδιαγραφές Συνδέσμων e-Shop (Search Deep Links)**:
    - **Σκλαβενίτης**: `https://www.sklavenitis.gr/apotelesmata-anazitisis/?Query={query}` (Χρησιμοποιεί `Query` με κεφαλαίο **Q**, όχι `search`).
    - **ΑΒ Βασιλόπουλος**: `https://www.ab.gr/search?q={query}`
-   - **MyMarket**: `https://eshop.mymarket.gr/anazitisi?q={query}`
+   - **MyMarket**: `https://www.mymarket.gr/search?query={query}` (Χρησιμοποιεί `query` αντί για `q` και το νέο domain).
    - **Κρητικός**: `https://eshop.kritikos-sm.gr/anazitisi?q={query}`
    - **Μασούτης**: `https://www.masoutis.gr/categories/index/search?text={query}` (Χρησιμοποιεί `text` και συγκεκριμένο path).
-   - **Lidl**: `https://www.lidl.gr/search?q={query}`
+   - **Lidl**: `https://www.lidl-hellas.gr/q/search?q={query}` (Χρησιμοποιεί `/q/search` στο domain `lidl-hellas.gr`).
 
 3. **Διασύνδεση στο `src/app/page.tsx`**:
    - State για το `isHelperOpen: boolean` και `helperRetailer: string | null`.
@@ -94,6 +94,8 @@ mysuper-app/
 *   **Διορθώσεις URL αναζήτησης**:
     - **Σκλαβενίτης**: Διορθώθηκε η παράμετρος από `?search=` σε `?Query=` για να αποφευχθεί το σφάλμα ελάχιστων χαρακτήρων (3+).
     - **Μασούτης**: Διορθώθηκε το URL σε `https://www.masoutis.gr/categories/index/search?text=` καθώς η προηγούμενη διεύθυνση δεν επέστρεφε αποτελέσματα.
+    - **MyMarket**: Διορθώθηκε το URL σε `https://www.mymarket.gr/search?query=` επειδή το eshop ανακατευθύνει στο κεντρικό site και χρησιμοποιεί την παράμετρο `query`.
+    - **Lidl**: Διορθώθηκε το URL σε `https://www.lidl-hellas.gr/q/search?q=` ώστε να αντιστοιχεί στη σωστή διεύθυνση αναζήτησης του ελληνικού Lidl.
 *   **Διαχείριση Barcode vs Fallback**:
     - Το API του PosoKanei (εξέλιξη του e-Katanalotis) **δεν** επιστρέφει το barcode (EAN) κατά την περιήγηση κατηγοριών ή την αναζήτηση κειμένου (επιστρέφει μόνο το UUID).
     - Για τον λόγο αυτό, αποθηκεύουμε το barcode στο αντικείμενο του προϊόντος κατά τη σάρωση (`handleBarcodeScanSuccess`), και όταν αυτό δεν υπάρχει (π.χ. προσθήκη από κατηγορία), χρησιμοποιούμε ως fallback το συνδυασμό `Brand + Name` με έλεγχο ασφαλείας να μην γίνει αναζήτηση εάν το κείμενο είναι < 3 χαρακτήρες (για αποφυγή σφαλμάτων).

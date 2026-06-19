@@ -122,13 +122,13 @@ export default function EShopHelperModal({ isOpen, onClose, products, retailer }
             case 'ab_vasilopoulos':
                 return `https://www.ab.gr/search?q=${encodeURIComponent(query)}`;
             case 'mymarket':
-                return `https://eshop.mymarket.gr/anazitisi?q=${encodeURIComponent(query)}`;
+                return `https://www.mymarket.gr/search?query=${encodeURIComponent(query)}`;
             case 'kritikos':
                 return `https://eshop.kritikos-sm.gr/anazitisi?q=${encodeURIComponent(query)}`;
             case 'masoutis':
                 return `https://www.masoutis.gr/categories/index/search?text=${encodeURIComponent(query)}`;
             case 'lidl':
-                return `https://www.lidl.gr/search?q=${encodeURIComponent(query)}`;
+                return `https://www.lidl-hellas.gr/q/search?q=${encodeURIComponent(query)}`;
             default:
                 return info.url; // Fallback to main home page
         }
