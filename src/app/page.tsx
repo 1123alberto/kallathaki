@@ -5,9 +5,12 @@ import {
     Search, Moon, Sun, Heart, Trash2, Share2, Copy, Link as LinkIcon, 
     X, Sparkles, ShoppingBag, TrendingUp, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid,
     Store, Percent, Trophy, Info, PiggyBank, RefreshCw, Menu, ShoppingBasket,
-    MapPin, Home
+    MapPin, Home, Camera
 } from 'lucide-react';
 import Chart from 'chart.js/auto';
+import dynamic from 'next/dynamic';
+
+const BarcodeScannerModal = dynamic(() => import('../components/BarcodeScannerModal'), { ssr: false });
 
 // Allowed 6 supermarkets
 const ALLOWED_RETAILERS = ['lidl', 'masoutis', 'ab_vasilopoulos', 'mymarket', 'sklavenitis', 'kritikos'];
@@ -88,6 +91,7 @@ export default function MySuperApp() {
     const [favorites, setFavorites] = useState<Product[]>([]);
     const [activeBasketIds, setActiveBasketIds] = useState<string[]>([]);
     const [favoritesSubTab, setFavoritesSubTab] = useState<'pantry' | 'basket'>('pantry');
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
 
     const activeBasketProducts = useMemo(() => {
         return favorites.filter(p => activeBasketIds.includes(p.id));
@@ -443,6 +447,35 @@ export default function MySuperApp() {
         setCurrentPage(1);
         setActiveTab('products');
         setIsSidebarOpen(false);
+    };
+
+    const handleBarcodeScanSuccess = async (barcode: string) => {
+        setLoadingProducts(true);
+        try {
+            const res = await fetch(`/api/products/barcode/${barcode}?countries=GR&include_tax=true`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data) {
+                    const sanitized = sanitizeProduct(data);
+                    setSelectedProduct(sanitized);
+                    setIsDetailOpen(true);
+                    return;
+                }
+            }
+            
+            // Fallback: search textually if barcode direct lookup is not found
+            setSearchTerm(barcode);
+            setCurrentPage(1);
+            setActiveTab('products');
+            alert(`Το barcode "${barcode}" δεν αντιστοιχεί σε κάποιο προϊόν απευθείας. Έγινε αναζήτηση με τον κωδικό.`);
+        } catch (error) {
+            console.error("Barcode search error:", error);
+            setSearchTerm(barcode);
+            setCurrentPage(1);
+            setActiveTab('products');
+        } finally {
+            setLoadingProducts(false);
+        }
     };
 
     const isHomeScreen = !searchTerm && categoryPath.length === 0;
@@ -901,17 +934,26 @@ export default function MySuperApp() {
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                     placeholder="Αναζήτηση προϊόντων (π.χ. γάλα, φέτα, ρύζι)..."
-                                    className="w-full pl-9 pr-10 py-2 text-sm bg-input-custom border border-transparent focus:border-indigo-500 focus:bg-background rounded-xl outline-none transition"
+                                    className="w-full pl-9 pr-16 py-2 text-sm bg-input-custom border border-transparent focus:border-indigo-500 focus:bg-background rounded-xl outline-none transition text-foreground"
                                 />
-                                {searchTerm && (
+                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                                    {searchTerm && (
+                                        <button 
+                                            onClick={() => setSearchTerm('')} 
+                                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+                                            title="Καθαρισμός αναζήτησης"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
                                     <button 
-                                        onClick={() => setSearchTerm('')} 
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition cursor-pointer"
-                                        title="Καθαρισμός αναζήτησης"
+                                        onClick={() => setIsScannerOpen(true)}
+                                        className="p-1 text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 transition cursor-pointer"
+                                        title="Σάρωση Barcode (Scan)"
                                     >
-                                        <X className="w-4 h-4" />
+                                        <Camera className="w-4 h-4" />
                                     </button>
-                                )}
+                                </div>
                             </div>
                         </div>
 
@@ -975,15 +1017,33 @@ export default function MySuperApp() {
                                                 Συνδέεται απευθείας με την επίσημη βάση δεδομένων e-katanalotis. Βρείτε τις χαμηλότερες τιμές, φτιάξτε το καλάθι σας και βελτιστοποιήστε τα έξοδά σας με ένα κλικ.
                                             </p>
                                             
-                                            <div className="relative max-w-md mt-6 shadow-lg rounded-2xl overflow-hidden">
+                                            <div className="relative max-w-md mt-6 shadow-lg rounded-2xl overflow-hidden bg-white flex items-center">
                                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-500" />
                                                 <input 
                                                     type="text" 
                                                     value={searchTerm}
                                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                                     placeholder="Αναζητήστε προϊόντα (π.χ. γάλα, ελαιόλαδο, φέτα)..."
-                                                    className="w-full pl-11 pr-4 py-3.5 text-sm bg-white text-slate-800 placeholder-slate-405 focus:bg-white rounded-2xl outline-none border-none shadow-inner transition"
+                                                    className="w-full pl-11 pr-20 py-3.5 text-sm bg-white text-slate-800 placeholder-slate-450 rounded-2xl outline-none border-none shadow-inner transition"
                                                 />
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                    {searchTerm && (
+                                                        <button 
+                                                            onClick={() => setSearchTerm('')} 
+                                                            className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
+                                                            title="Καθαρισμός αναζήτησης"
+                                                        >
+                                                            <X className="w-4.5 h-4.5" />
+                                                        </button>
+                                                    )}
+                                                    <button 
+                                                        onClick={() => setIsScannerOpen(true)}
+                                                        className="p-1 text-indigo-600 hover:text-indigo-800 transition cursor-pointer flex items-center gap-1"
+                                                        title="Σάρωση Barcode (Scan)"
+                                                    >
+                                                        <Camera className="w-4.5 h-4.5" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1882,6 +1942,13 @@ export default function MySuperApp() {
                         <span className="text-[10px]">Κατηγορίες</span>
                     </button>
                     <button 
+                        onClick={() => setIsScannerOpen(true)}
+                        className="flex flex-col items-center gap-1 text-slate-500 hover:text-indigo-500 transition"
+                    >
+                        <Camera className="w-5 h-5" />
+                        <span className="text-[10px]">Σάρωση</span>
+                    </button>
+                    <button 
                         onClick={() => setActiveTab('favorites')}
                         className={`flex flex-col items-center gap-1 transition relative ${
                             activeTab === 'favorites' ? 'text-indigo-500 font-bold' : 'text-slate-500 hover:text-foreground'
@@ -1896,6 +1963,13 @@ export default function MySuperApp() {
                         )}
                     </button>
                 </nav>
+
+                {/* Barcode Scanner Modal */}
+                <BarcodeScannerModal 
+                    isOpen={isScannerOpen} 
+                    onClose={() => setIsScannerOpen(false)} 
+                    onScanSuccess={handleBarcodeScanSuccess} 
+                />
 
             </div>
         </div>
