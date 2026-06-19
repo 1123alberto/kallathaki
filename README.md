@@ -55,6 +55,34 @@ mysuper-app/
 ## 📋 Μελλοντικές Βελτιώσεις (Things to Do)
 
 *   [x] **📷 Scan & Compare (Barcode Scanner)**: Δυνατότητα σάρωσης του γραμμωτού κώδικα (barcode - EAN) των προϊόντων μέσω της κάμερας της κινητής συσκευής (ή με χειροκίνητη πληκτρολόγηση EAN) για αστραπιαία εύρεση και σύγκριση τιμών σε πραγματικό χρόνο.
+*   [ ] **🛒 e-Shop Order Helper (Βοηθός Παραγγελίας e-Shop)**: Δυνατότητα γρήγορης εύρεσης και προσθήκης των προϊόντων του καλαθιού στα επίσημα online e-shops των supermarkets μέσω EAN barcode deep-linking.
+
+---
+
+### 📝 Σχέδιο Υλοποίησης: e-Shop Order Helper
+
+Για την υλοποίηση του βοηθού παραγγελίας online στα e-shops, ακολουθούμε το παρακάτω σχέδιο:
+
+1. **Δημιουργία του Component `src/components/EShopHelperModal.tsx`**:
+   - Θα δέχεται: `isOpen: boolean`, `onClose: () => void`, `products: Product[]`, `retailer: string` (π.χ. 'ab', 'sklavenitis', 'mymarket', 'kritikos').
+   - Θα παράγει δυναμικούς συνδέσμους αναζήτησης με βάση το EAN barcode ή το όνομα (ως fallback) για κάθε retailer.
+   - Θα διατηρεί ένα τοπικό state με τα "πατημένα" (προστιθέμενα) προϊόντα ώστε να εμφανίζει πράσινο checkmark (π.χ. "✓ Προστέθηκε στο e-shop") για να ξέρει ο χρήστης την πρόοδό του.
+   - Θα περιλαμβάνει σαφείς οδηγίες χρήσης (Βήμα 1: Σύνδεση στο e-shop, Βήμα 2: Προσθήκη προϊόντων ένα-προς-ένα).
+
+2. **Προδιαγραφές Συνδέσμων e-Shop (Search Deep Links)**:
+   - **Σκλαβενίτης**: `https://www.sklavenitis.gr/apotelesmata-anazitisis/?search={barcode}`
+   - **ΑΒ Βασιλόπουλος**: `https://www.ab.gr/search?q={barcode}`
+   - **MyMarket**: `https://eshop.mymarket.gr/anazitisi?q={barcode}`
+   - **Κρητικός**: `https://eshop.kritikos-sm.gr/anazitisi?q={barcode}`
+
+3. **Διασύνδεση στο `src/app/page.tsx`**:
+   - State για το `isHelperOpen: boolean` και `helperRetailer: string | null`.
+   - Ενσωμάτωση του `<EShopHelperModal />` στο app shell.
+   - Προσθήκη trigger button (π.χ. "🛒 Παραγγελία Online") δίπλα στο σύνολο του κάθε supermarket στη λίστα σύγκρισης τιμών του καλαθιού (Active Basket).
+
+4. **Έλεγχος και Δοκιμή (Validation)**:
+   - Δοκιμή ανοίγματος των συνδέσμων και επιβεβαίωση ότι οι e-shop αναζητήσεις λειτουργούν σωστά.
+   - Έλεγχος συμβατότητας (TypeScript compilation και Next.js build).
 
 
 
