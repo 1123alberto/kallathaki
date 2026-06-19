@@ -95,10 +95,7 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: 
                 Html5QrcodeSupportedFormats.UPC_A,
                 Html5QrcodeSupportedFormats.UPC_E
             ],
-            verbose: false,
-            experimentalFeatures: {
-                useBarCodeDetectorIfSupported: true
-            }
+            verbose: false
         });
         html5QrCodeRef.current = html5QrCode;
 
@@ -108,12 +105,6 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: 
                 cameraId,
                 {
                     fps: 15,
-                    // Barcode scanning window configuration (standard rectangular aspect ratio)
-                    qrbox: (width, height) => {
-                        const boxWidth = Math.min(width * 0.85, 320);
-                        const boxHeight = Math.min(height * 0.4, 160);
-                        return { x: (width - boxWidth) / 2, y: (height - boxHeight) / 2, width: boxWidth, height: boxHeight };
-                    },
                     videoConstraints: {
                         deviceId: { exact: cameraId },
                         width: { min: 640, ideal: 1280, max: 1920 },
