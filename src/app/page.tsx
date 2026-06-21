@@ -1480,9 +1480,9 @@ export default function MySuperApp() {
                                 ) : (
                                     <div className="space-y-6">
                                         {pushSupported && (
-                                            <div className="bg-indigo-50/50 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                            <div className="bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-500">
+                                                    <div className="p-2 bg-amber-500/10 rounded-xl text-amber-600 dark:text-amber-400">
                                                         <Bell className="w-5 h-5" />
                                                     </div>
                                                     <div>
@@ -1498,8 +1498,8 @@ export default function MySuperApp() {
                                                     onClick={isSubscribed ? unsubscribeFromPush : subscribeToPush}
                                                     className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
                                                         isSubscribed
-                                                            ? 'bg-slate-250 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                                                            : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm'
+                                                            ? 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                                                            : 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm'
                                                     }`}
                                                 >
                                                     {isSubscribed ? 'Απενεργοποίηση' : 'Ενεργοποίηση'}
