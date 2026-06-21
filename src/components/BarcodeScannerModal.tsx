@@ -110,14 +110,26 @@ export default function BarcodeScannerModal({ isOpen, onClose, onScanSuccess }: 
             await html5QrCode.start(
                 cameraId,
                 {
-                    fps: 15,
+                    fps: 24,
+                    qrbox: (width: number, height: number) => {
+                        const boxWidth = Math.min(width * 0.85, 320);
+                        const boxHeight = boxWidth * 0.5; // aspect ratio 2:1 for barcodes
+                        return {
+                            width: Math.round(boxWidth),
+                            height: Math.round(boxHeight)
+                        };
+                    },
+                    experimentalFeatures: {
+                        useBarCodeDetectorIfSupported: true
+                    },
+                    useBarCodeDetectorIfSupported: true,
                     videoConstraints: {
                         deviceId: { exact: cameraId },
                         width: { min: 640, ideal: 1280, max: 1920 },
                         height: { min: 480, ideal: 720, max: 1080 },
                         aspectRatio: 1.7777777778
                     }
-                },
+                } as any,
                 (decodedText) => {
                     // Success callback
                     if (decodedText) {
