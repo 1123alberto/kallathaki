@@ -20,3 +20,13 @@ If you are an AI agent working on this codebase, please adhere to the following 
 ### 4. Simplified Maps Integration
 * **Rule**: Do not add mapping libraries (such as Leaflet or React-Leaflet) to keep the project bundle lightweight.
 * **Reason**: Closest branches and navigation routes are resolved via a key-less Google Maps iframe embed query (`https://maps.google.com/maps?q=...&output=embed`) using Geolocation coordinates.
+
+### 5. Advanced Hydration Mismatch Solutions
+* **Rule**: For any interactive state or attributes that depend on browser-only APIs (like `window.location`, `localStorage`, or client-side layout adjustments), use a `mounted` lifecycle flag to delay client-side calculation until after initial hydration.
+* **Reason**: Next.js pre-renders pages on the server. If the client’s first render differs from the server’s pre-rendered HTML, it causes React hydration warnings.
+* **Inline Script Workaround**: To inject script files (e.g., preventing dark mode theme flash) inside `layout.tsx`, always use Next.js's `<Script>` component with `strategy="beforeInteractive"` and an explicit `id` rather than raw `<script>` tags, preventing browser extensions (like password managers) from disrupting the DOM structure.
+
+### 6. Mobile Barcode Scanner Viewport Optimization
+* **Rule**: Limit the scan detection region using a restricted viewport (`qrbox` bounding box matching viewfinder dimensions) and set camera acquisition rates to 20-25fps.
+* **Reason**: Cropping the camera feed to a localized detection box prevents the QR engine from scanning the entire sensor frame, reducing CPU overhead by ~75% and speeding up scans.
+* **Hardware Acceleration**: Always attempt to opt into the native browser `BarcodeDetector` API (where available in Chromium-based browsers/WebView) to leverage hardware-accelerated decoding before falling back to heavier JS/WASM engine decoders.
