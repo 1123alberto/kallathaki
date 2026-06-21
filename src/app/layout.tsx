@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     title: "MySuper.gr",
   },
   icons: {
-    apple: "/icon.png",
+    apple: "/icon-192.png",
   },
 };
 

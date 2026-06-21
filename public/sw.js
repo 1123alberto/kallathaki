@@ -1,7 +1,8 @@
 const CACHE_NAME = 'mysuper-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
-  '/icon.png',
+  '/icon-192.png',
+  '/icon-512.png',
   '/manifest.webmanifest'
 ];
 
@@ -51,8 +52,8 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body,
-    icon: '/icon.png',
-    badge: '/icon.png',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
     vibrate: [100, 50, 100],
     data: {
       url: data.url || '/'

@@ -12,14 +12,32 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     icons: [
       {
-        src: '/icon.png',
-        sizes: '192x192 512x512',
+        src: '/icon-192.png',
+        sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon.png',
-        sizes: '192x192 512x512',
+        src: '/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon-1024.png',
+        sizes: '1024x1024',
+        type: 'image/png',
+        purpose: 'any',
+      },
+      {
+        src: '/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
       }
@@ -30,14 +48,14 @@ export default function manifest(): MetadataRoute.Manifest {
         short_name: 'Σάρωση',
         url: '/?action=scan',
         description: 'Ανοίξτε απευθείας την κάμερα για σάρωση barcode προϊόντος',
-        icons: [{ src: '/icon.png', sizes: '192x192', type: 'image/png' }]
+        icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }]
       },
       {
         name: 'Οδηγός Χρήσης',
         short_name: 'Οδηγός',
         url: '/guide',
         description: 'Μάθετε πώς να χρησιμοποιείτε την εφαρμογή',
-        icons: [{ src: '/icon.png', sizes: '192x192', type: 'image/png' }]
+        icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }]
       }
     ],
     launch_handler: {
