@@ -1051,6 +1051,13 @@ export default function MySuperApp() {
                             <button className="md:hidden p-2 hover:bg-input-custom rounded-xl" onClick={() => setIsSidebarOpen(true)}>
                                 <Menu className="w-5 h-5" />
                             </button>
+                            <button 
+                                onClick={resetFilters}
+                                className="md:hidden font-black text-lg bg-gradient-to-r from-emerald-600 to-teal-700 bg-clip-text text-transparent mr-1 cursor-pointer focus:outline-none select-none"
+                                title="Αρχική"
+                            >
+                                MySuper.gr
+                            </button>
                             
                             <div className="relative flex-1 max-w-md">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
