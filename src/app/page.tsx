@@ -7,7 +7,7 @@ import {
     Search, Moon, Sun, Heart, Trash2, Share2, Copy, Link as LinkIcon, 
     X, Sparkles, ShoppingBag, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid,
     Store, Percent, Trophy, Info, PiggyBank, RefreshCw, Menu, ShoppingBasket,
-    MapPin, Home, Camera
+    MapPin, Home, Camera, Bell
 } from 'lucide-react';
 import Chart from 'chart.js/auto';
 import dynamic from 'next/dynamic';
@@ -180,6 +180,65 @@ export default function MySuperApp() {
         localStorage.setItem('posokanei_active_basket', JSON.stringify([]));
     };
 
+    const [pushSupported, setPushSupported] = useState(false);
+    const [isSubscribed, setIsSubscribed] = useState(false);
+
+    const urlBase64ToUint8Array = (base64String: string) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding)
+            .replace(/-/g, '+')
+            .replace(/_/g, '/');
+
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    };
+
+    const subscribeToPush = async () => {
+        if (!pushSupported) return;
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') {
+                alert('Η άδεια για ειδοποιήσεις απορρίφθηκε.');
+                return;
+            }
+
+            const registration = await navigator.serviceWorker.ready;
+            const vapidPublicKey = 'BEl62iUZGStZOy4mJJw92z6r1wCr5T0FC21B_a5vB52yZ10Mh20Hh88S_nL1u5Yd_e3yB-8e9Z18h20z52yZ10M';
+            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+            const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: convertedVapidKey
+            });
+
+            console.log('Push Subscription:', JSON.stringify(subscription));
+            setIsSubscribed(true);
+            alert('Ενεργοποιήθηκαν οι ειδοποιήσεις για προσφορές!');
+        } catch (error) {
+            console.error('Failed to subscribe:', error);
+            alert('Σφάλμα κατά την ενεργοποίηση ειδοποιήσεων: ' + error);
+        }
+    };
+
+    const unsubscribeFromPush = async () => {
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            if (subscription) {
+                await subscription.unsubscribe();
+                setIsSubscribed(false);
+                alert('Απενεργοποιήθηκαν οι ειδοποιήσεις.');
+            }
+        } catch (error) {
+            console.error('Failed to unsubscribe:', error);
+        }
+    };
+
     const [totalProductsCount, setTotalProductsCount] = useState<number>(0);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [loadingCategories, setLoadingCategories] = useState(false);
@@ -295,6 +354,16 @@ export default function MySuperApp() {
             // Check for shortcut action
             if (window.location.search.includes('action=scan')) {
                 setIsScannerOpen(true);
+            }
+
+            // Check Push Notification support
+            if ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window) {
+                setPushSupported(true);
+                navigator.serviceWorker.ready.then((registration) => {
+                    registration.pushManager.getSubscription().then((subscription) => {
+                        setIsSubscribed(!!subscription);
+                    });
+                });
             }
             
             setMounted(true);
@@ -1410,6 +1479,33 @@ export default function MySuperApp() {
                                     </div>
                                 ) : (
                                     <div className="space-y-6">
+                                        {pushSupported && (
+                                            <div className="bg-indigo-50/50 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/30 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-indigo-500/10 rounded-xl text-indigo-500">
+                                                        <Bell className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                                            Ειδοποιήσεις για Προσφορές
+                                                        </h4>
+                                                        <p className="text-[11px] text-slate-500 mt-0.5">
+                                                            Λάβετε αυτόματες ειδοποιήσεις όταν κάποιο προϊόν του καλαθιού σας έχει έκπτωση.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={isSubscribed ? unsubscribeFromPush : subscribeToPush}
+                                                    className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
+                                                        isSubscribed
+                                                            ? 'bg-slate-250 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+                                                            : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-sm'
+                                                    }`}
+                                                >
+                                                    {isSubscribed ? 'Απενεργοποίηση' : 'Ενεργοποίηση'}
+                                                </button>
+                                            </div>
+                                        )}
                                         
                                         {/* Sub-tab Navigation */}
                                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-border-custom gap-4">

@@ -37,3 +37,50 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// Push notification listener
+self.addEventListener('push', (event) => {
+  let data = { title: 'MySuper.gr', body: 'Νέα προσφορά στα προϊόντα σας!' };
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch {
+      data = { title: 'MySuper.gr', body: event.data.text() };
+    }
+  }
+
+  const options = {
+    body: data.body,
+    icon: '/icon.png',
+    badge: '/icon.png',
+    vibrate: [100, 50, 100],
+    data: {
+      url: data.url || '/'
+    }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Notification click action handler
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const urlToOpen = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // If a window is already open, focus it
+      for (let client of windowClients) {
+        if (client.url.includes(urlToOpen) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open a new window
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
