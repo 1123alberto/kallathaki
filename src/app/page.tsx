@@ -219,7 +219,7 @@ export default function MySuperApp() {
 
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
-    const [sortBy, setSortBy] = useState('priceAsc');
+    const sortBy = 'priceAsc';
     const [activeTab, setActiveTab] = useState<'products' | 'favorites'>('products');
 
     // UI state
@@ -1033,14 +1033,6 @@ export default function MySuperApp() {
                                 </button>
                             </div>
 
-                            <select 
-                                value={sortBy} 
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="px-3 py-2 text-xs font-medium bg-background border border-border-custom rounded-xl outline-none focus:border-indigo-500 transition text-foreground"
-                            >
-                                <option value="priceAsc">Χαμηλότερη Τιμή</option>
-                                <option value="priceDesc">Υψηλότερη Τιμή</option>
-                            </select>
                         </div>
                     </header>
 
