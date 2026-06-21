@@ -1053,10 +1053,11 @@ export default function MySuperApp() {
                             </button>
                             <button 
                                 onClick={resetFilters}
-                                className="md:hidden font-black text-lg bg-gradient-to-r from-emerald-600 to-teal-700 bg-clip-text text-transparent mr-1 cursor-pointer focus:outline-none select-none"
+                                className="md:hidden flex items-center gap-1.5 font-black text-lg text-left hover:opacity-85 transition cursor-pointer focus:outline-none select-none mr-1"
                                 title="Αρχική"
                             >
-                                MySuper.gr
+                                <ShoppingBasket className="w-5 h-5 text-indigo-500" />
+                                <span className="bg-gradient-to-r from-emerald-600 to-teal-700 bg-clip-text text-transparent">MySuper.gr</span>
                             </button>
                             
                             <div className="relative flex-1 max-w-md">
