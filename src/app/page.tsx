@@ -291,6 +291,12 @@ export default function MySuperApp() {
             setTheme(storedTheme as 'light' | 'dark');
             setFavorites(loadedFavs);
             setActiveBasketIds(loadedBasketIds);
+            
+            // Check for shortcut action
+            if (window.location.search.includes('action=scan')) {
+                setIsScannerOpen(true);
+            }
+            
             setMounted(true);
         }, 0);
     }, []);
