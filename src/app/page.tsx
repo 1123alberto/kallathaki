@@ -1914,9 +1914,9 @@ export default function MySuperApp() {
 
                 {/* Details Drawer */}
                 <div className={`
-                    fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] bg-sidebar-bg border-l border-border-custom 
-                    shadow-2xl transition-transform duration-300 flex flex-col
-                    ${isDetailOpen ? 'translate-x-0' : 'translate-x-full'}
+                    fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] bg-sidebar-bg
+                    transition-all duration-300 flex flex-col
+                    ${isDetailOpen ? 'translate-x-0 border-l border-border-custom shadow-2xl' : 'translate-x-full border-l-transparent shadow-none pointer-events-none'}
                 `}>
                     {selectedProduct && (
                         <>
@@ -1986,9 +1986,9 @@ export default function MySuperApp() {
 
                 {/* Share Drawer */}
                 <div className={`
-                    fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] bg-sidebar-bg border-l border-border-custom 
-                    shadow-2xl transition-transform duration-300 flex flex-col
-                    ${isShareOpen ? 'translate-x-0' : 'translate-x-full'}
+                    fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] bg-sidebar-bg
+                    transition-all duration-300 flex flex-col
+                    ${isShareOpen ? 'translate-x-0 border-l border-border-custom shadow-2xl' : 'translate-x-full border-l-transparent shadow-none pointer-events-none'}
                 `}>
                     <div className="p-6 border-b border-border-custom flex items-center justify-between">
                         <h3 className="text-base font-bold flex items-center gap-1.5"><Share2 className="w-5 h-5 text-emerald-500" /><span>Κοινοποίηση Λίστας</span></h3>
@@ -2039,9 +2039,9 @@ export default function MySuperApp() {
 
                 {/* Map Drawer */}
                 <div className={`
-                    fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] bg-sidebar-bg border-l border-border-custom 
-                    shadow-2xl transition-transform duration-300 flex flex-col
-                    ${activeMapRetailer ? 'translate-x-0' : 'translate-x-full'}
+                    fixed inset-y-0 right-0 z-50 w-full sm:w-[480px] bg-sidebar-bg
+                    transition-all duration-300 flex flex-col
+                    ${activeMapRetailer ? 'translate-x-0 border-l border-border-custom shadow-2xl' : 'translate-x-full border-l-transparent shadow-none pointer-events-none'}
                 `}>
                     <div className="p-6 border-b border-border-custom flex items-center justify-between">
                         <h3 className="text-base font-bold flex items-center gap-1.5">
