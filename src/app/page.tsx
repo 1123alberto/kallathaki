@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import Link from 'next/link';
 import { 
     Search, Moon, Sun, Heart, Trash2, Share2, Copy, Link as LinkIcon, 
     X, Sparkles, ShoppingBag, TrendingUp, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid,
@@ -191,8 +192,6 @@ export default function MySuperApp() {
     // Chart ref
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<any>(null);
-    const headerSearchInputRef = useRef<HTMLInputElement>(null);
-    const wasHeroSearchFocused = useRef(false);
 
     // Sanitize products to only keep allowed retailers
     const sanitizeProduct = (prod: any): Product => {
@@ -303,16 +302,6 @@ export default function MySuperApp() {
         };
         fetchMetadata();
     }, []);
-
-    // Focus header search input when transitioning from Hero search input
-    useEffect(() => {
-        if (searchTerm && wasHeroSearchFocused.current && headerSearchInputRef.current) {
-            headerSearchInputRef.current.focus();
-            const length = headerSearchInputRef.current.value.length;
-            headerSearchInputRef.current.setSelectionRange(length, length);
-            wasHeroSearchFocused.current = false;
-        }
-    }, [searchTerm]);
 
     // Fetch Products when filters change
     useEffect(() => {
@@ -962,7 +951,6 @@ export default function MySuperApp() {
                             <div className="relative flex-1 max-w-md">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <input 
-                                    ref={headerSearchInputRef}
                                     type="text" 
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
@@ -1050,38 +1038,21 @@ export default function MySuperApp() {
                                                 Συνδέεται απευθείας με την επίσημη βάση δεδομένων e-katanalotis. Βρείτε τις χαμηλότερες τιμές, φτιάξτε το καλάθι σας και βελτιστοποιήστε τα έξοδά σας με ένα κλικ.
                                             </p>
                                             
-                                            <div className="relative max-w-md mt-6 shadow-lg rounded-2xl overflow-hidden bg-white flex items-center">
-                                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-500" />
-                                                <input 
-                                                    type="text" 
-                                                    value={searchTerm}
-                                                    onChange={(e) => { 
-                                                        wasHeroSearchFocused.current = true;
-                                                        setSearchTerm(e.target.value); 
-                                                        setCurrentPage(1); 
-                                                    }}
-                                                    onFocus={() => { wasHeroSearchFocused.current = true; }}
-                                                    placeholder="Αναζητήστε προϊόντα (π.χ. γάλα, ελαιόλαδο, φέτα)..."
-                                                    className="w-full pl-11 pr-20 py-3.5 text-sm bg-white text-slate-800 placeholder-slate-450 rounded-2xl outline-none border-none shadow-inner transition"
-                                                />
-                                                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                    {searchTerm && (
-                                                        <button 
-                                                            onClick={() => setSearchTerm('')} 
-                                                            className="p-1 text-slate-400 hover:text-slate-600 transition cursor-pointer"
-                                                            title="Καθαρισμός αναζήτησης"
-                                                        >
-                                                            <X className="w-4.5 h-4.5" />
-                                                        </button>
-                                                    )}
-                                                    <button 
-                                                        onClick={() => setIsScannerOpen(true)}
-                                                        className="p-1 text-indigo-600 hover:text-indigo-800 transition cursor-pointer flex items-center gap-1"
-                                                        title="Σάρωση Barcode (Scan)"
-                                                    >
-                                                        <Camera className="w-4.5 h-4.5" />
-                                                    </button>
-                                                </div>
+                                            <div className="mt-6 flex flex-wrap gap-4">
+                                                <Link 
+                                                    href="/guide" 
+                                                    className="inline-flex items-center gap-2 px-6 py-3.5 bg-white text-indigo-700 hover:bg-indigo-50 font-bold rounded-2xl shadow-md transition duration-250 cursor-pointer text-sm"
+                                                >
+                                                    <Sparkles className="w-4 h-4 text-indigo-500" />
+                                                    <span>{"\u03a0\u03ce\u03c2 \u039b\u03b5\u03b9\u03c4\u03bf\u03c5\u03c1\u03b3\u03b5\u03af (\u039f\u03b4\u03b7\u03b3\u03cc\u03c2 \u03a7\u03c1\u03ae\u03c3\u03b7\u03c2)"}</span>
+                                                </Link>
+                                                <button 
+                                                    onClick={() => setIsScannerOpen(true)}
+                                                    className="inline-flex items-center gap-2 px-6 py-3.5 bg-indigo-600/20 border border-white/20 hover:bg-indigo-600/35 text-white font-bold rounded-2xl shadow-md transition duration-250 cursor-pointer text-sm"
+                                                >
+                                                    <Camera className="w-4.5 h-4.5 text-indigo-250" />
+                                                    <span>{"\u03a3\u03ac\u03c1\u03c9\u03c3\u03b7 Barcode (Scan)"}</span>
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
