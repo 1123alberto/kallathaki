@@ -3,20 +3,20 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
-  --background: #ffffff;
+  --background: #f8fafc;
   --foreground: #0f172a;
   --panel-bg: #ffffff;
-  --sidebar-bg: #ffffff;
+  --sidebar-bg: #f0fdf4;
   --card-bg: #ffffff;
   --border-custom: rgba(15, 23, 42, 0.06);
-  --input-custom: #f1f5f9;
+  --input-custom: #e2e8f0;
 }
 
 .dark {
   --background: #0f172a;
   --foreground: #cbd5e1;
   --panel-bg: #1e293b;
-  --sidebar-bg: #0f172a;
+  --sidebar-bg: #061512;
   --card-bg: #1e293b;
   --border-custom: rgba(148, 163, 184, 0.1);
   --input-custom: #1e293b;
@@ -33,6 +33,19 @@
 
   --color-slate-100: #cbd5e1;
   --color-slate-200: #94a3b8;
+
+  /* Map primary indigo classes to the beautiful emerald color palette */
+  --color-indigo-50: #f0fdf4;
+  --color-indigo-100: #dcfce7;
+  --color-indigo-200: #bbf7d0;
+  --color-indigo-300: #86efac;
+  --color-indigo-400: #4ade80;
+  --color-indigo-500: #059669;
+  --color-indigo-600: #047857;
+  --color-indigo-700: #039f76;
+  --color-indigo-800: #065f46;
+  --color-indigo-900: #064e3b;
+  --color-indigo-950: #022c22;
 
   --font-sans: var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono), monospace;
@@ -70,9 +83,9 @@ body {
 .spinner {
   width: 28px;
   height: 28px;
-  border: 3px solid rgba(99, 102, 241, 0.15);
+  border: 3px solid rgba(217, 119, 6, 0.15);
   border-radius: 50%;
-  border-top-color: #6366f1;
+  border-top-color: #d97706;
   animation: spin 1s linear infinite;
   display: inline-block;
 }

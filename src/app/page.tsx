@@ -970,7 +970,7 @@ export default function MySuperApp() {
 
                         <div className="flex items-center justify-between text-xs font-semibold text-slate-500 px-2">
                             <span>ΚΑΤΗΓΟΡΙΕΣ</span>
-                            {loadingCategories && <RefreshCw className="w-3.5 h-3.5 animate-spin text-indigo-500" />}
+                            {loadingCategories && <RefreshCw className="w-3.5 h-3.5 animate-spin text-amber-500" />}
                         </div>
 
                         <div className="space-y-1">
@@ -1118,19 +1118,19 @@ export default function MySuperApp() {
                                 // BRAND-NEW HOMEPAGE DASHBOARD
                                 <div className="space-y-10 pb-12">
                                     {/* Modern Hero Section */}
-                                    <div className="relative bg-gradient-to-br from-indigo-600 via-indigo-700 to-violet-800 text-white rounded-3xl p-8 md:p-12 shadow-xl overflow-hidden">
+                                    <div className="relative bg-gradient-to-br from-emerald-700 to-teal-800 text-white rounded-3xl p-8 md:p-12 shadow-xl overflow-hidden">
                                         <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                                         <div className="absolute bottom-0 left-0 w-60 h-60 bg-emerald-500/10 rounded-full blur-2xl -ml-20 -mb-20 pointer-events-none" />
                                         
                                         <div className="relative z-10 max-w-2xl">
-                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/25 text-white text-[11px] font-semibold mb-4">
-                                                <Sparkles className="w-3.5 h-3.5 text-indigo-200" />
+                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-white text-[11px] font-semibold mb-4">
+                                                <Sparkles className="w-3.5 h-3.5 text-white/80" />
                                                 <span>Έξυπνη Σύγκριση Τιμών</span>
                                             </div>
                                             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
                                                 Συγκρίνετε Τιμές Σούπερ Μάρκετ & Εξοικονομήστε Χρήματα
                                             </h2>
-                                            <p className="text-sm md:text-base text-indigo-100 max-w-lg mt-3 font-medium">
+                                            <p className="text-sm md:text-base text-white/90 max-w-lg mt-3 font-medium">
                                                 Συνδέεται απευθείας με την επίσημη βάση δεδομένων e-katanalotis. Βρείτε τις χαμηλότερες τιμές, φτιάξτε το καλάθι σας και βελτιστοποιήστε τα έξοδά σας με ένα κλικ.
                                             </p>
                                             
@@ -1351,7 +1351,7 @@ export default function MySuperApp() {
                                     ) : products.length === 0 ? (
                                         <div className="h-[40vh] flex flex-col items-center justify-center text-center max-w-sm mx-auto">
                                             {loadingProducts ? (
-                                                <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
+                                                <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
                                             ) : (
                                                 <>
                                                     <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center text-3xl mb-4">🔍</div>
@@ -1374,7 +1374,7 @@ export default function MySuperApp() {
 
                                             {loadingProducts ? (
                                                 <div className="h-60 flex items-center justify-center">
-                                                    <RefreshCw className="w-8 h-8 animate-spin text-indigo-500" />
+                                                    <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
                                                 </div>
                                             ) : (
                                                 <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
