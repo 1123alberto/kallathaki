@@ -1118,7 +1118,7 @@ export default function MySuperApp() {
                                 // BRAND-NEW HOMEPAGE DASHBOARD
                                 <div className="space-y-10 pb-12">
                                     {/* Modern Hero Section */}
-                                    <div className="relative bg-gradient-to-br from-emerald-700 to-teal-800 text-white rounded-3xl p-8 md:p-12 shadow-xl overflow-hidden">
+                                    <div className="relative bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 text-white rounded-3xl p-8 md:p-12 shadow-xl overflow-hidden">
                                         <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
                                         <div className="absolute bottom-0 left-0 w-60 h-60 bg-emerald-500/10 rounded-full blur-2xl -ml-20 -mb-20 pointer-events-none" />
                                         
@@ -1127,7 +1127,7 @@ export default function MySuperApp() {
                                                 <Sparkles className="w-3.5 h-3.5 text-white/80" />
                                                 <span>Έξυπνη Σύγκριση Τιμών</span>
                                             </div>
-                                            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight">
+                                            <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-white via-emerald-100 to-amber-200 bg-clip-text text-transparent">
                                                 Συγκρίνετε Τιμές Σούπερ Μάρκετ & Εξοικονομήστε Χρήματα
                                             </h2>
                                             <p className="text-sm md:text-base text-white/90 max-w-lg mt-3 font-medium">
