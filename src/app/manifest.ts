@@ -8,6 +8,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: 'Βρείτε τις καλύτερες τιμές στα ελληνικά σούπερ μάρκετ. Υπολογίστε το φθηνότερο καλάθι αγορών ή βελτιστοποιήστε τις αγορές σας σε πολλά καταστήματα.',
     start_url: '/',
     display: 'standalone',
+    categories: ['shopping', 'utilities'],
     background_color: '#0f172a',
     theme_color: '#4f46e5',
     orientation: 'portrait',
