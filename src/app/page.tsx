@@ -948,7 +948,7 @@ export default function KallathakiApp() {
                             title="Επιστροφή στην Αρχική"
                         >
                             <ShoppingBasket className="w-6 h-6 text-indigo-500" />
-                            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">Kallathaki.gr</h1>
+                            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">Kallathaki</h1>
                         </button>
                         <button className="md:hidden p-1 text-slate-500 hover:bg-input-custom rounded-lg" onClick={() => setIsSidebarOpen(false)}>
                             <X className="w-5 h-5" />
@@ -1057,7 +1057,7 @@ export default function KallathakiApp() {
                                 title="Αρχική"
                             >
                                 <ShoppingBasket className="w-6 h-6 text-indigo-500" />
-                                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">Kallathaki.gr</span>
+                                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">Kallathaki</span>
                             </button>
                             
                             <div className="relative flex-1 max-w-md">
