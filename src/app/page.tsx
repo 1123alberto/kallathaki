@@ -138,6 +138,116 @@ const sanitizeProduct = (prod: RawProduct): Product => {
     } as Product;
 };
 
+interface PantryItemProps {
+    prod: Product;
+    isSelected: boolean;
+    cheapest: any;
+    toggleBasketItem: (id: string) => void;
+    toggleFavorite: (e: any, prod: Product) => void;
+}
+
+function PantryItem({ prod, isSelected, cheapest, toggleBasketItem, toggleFavorite }: PantryItemProps) {
+    const [startX, setStartX] = useState(0);
+    const [currentX, setCurrentX] = useState(0);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startTime, setStartTime] = useState(0);
+
+    const handleStart = (clientX: number) => {
+        setStartX(clientX);
+        setCurrentX(clientX);
+        setIsDragging(true);
+        setStartTime(Date.now());
+    };
+
+    const handleMove = (clientX: number) => {
+        if (!isDragging) return;
+        setCurrentX(clientX);
+    };
+
+    const handleEnd = () => {
+        if (!isDragging) return;
+        setIsDragging(false);
+        const diffX = currentX - startX;
+        const duration = Date.now() - startTime;
+
+        // If it's a quick tap (moved less than 10px and duration less than 250ms), toggle selection
+        if (Math.abs(diffX) < 10 && duration < 250) {
+            toggleBasketItem(prod.id);
+        } else if (diffX < -80) {
+            // Swiped left past 80px -> Delete from favorites
+            toggleFavorite({ stopPropagation: () => {} } as any, prod);
+        }
+
+        setStartX(0);
+        setCurrentX(0);
+    };
+
+    const rawOffset = isDragging ? currentX - startX : 0;
+    // Limit drag to left only (negative values) and cap at -120px for safety
+    const offset = Math.max(-120, Math.min(0, rawOffset));
+    const willDelete = offset < -80;
+
+    return (
+        <div className="relative overflow-hidden rounded-2xl bg-rose-600 shadow-sm">
+            {/* Delete Background behind the card */}
+            <div className={`absolute inset-0 flex items-center justify-end pr-6 text-white text-xs font-bold gap-1.5 transition-colors duration-200 ${willDelete ? 'bg-rose-700' : 'bg-rose-600'}`}>
+                <Trash2 className={`w-4 h-4 transition-transform duration-200 ${willDelete ? 'scale-120' : 'scale-100'}`} />
+                <span className={willDelete ? 'underline' : ''}>Σύρετε για Διαγραφή</span>
+            </div>
+
+            {/* Slideable Foreground Card */}
+            <div
+                onTouchStart={(e) => handleStart(e.touches[0].clientX)}
+                onTouchMove={(e) => handleMove(e.touches[0].clientX)}
+                onTouchEnd={handleEnd}
+                onMouseDown={(e) => handleStart(e.clientX)}
+                onMouseMove={(e) => {
+                    if (e.buttons === 1) {
+                        handleMove(e.clientX);
+                    }
+                }}
+                onMouseUp={handleEnd}
+                onMouseLeave={handleEnd}
+                style={{
+                    transform: `translateX(${offset}px)`,
+                    transition: isDragging ? 'none' : 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+                className={`
+                    relative p-4 rounded-xl border transition-colors cursor-pointer flex items-center gap-3 select-none active:scale-[0.99]
+                    ${isSelected 
+                        ? 'bg-indigo-500/5 border-indigo-500/45 dark:border-indigo-500/30' 
+                        : 'bg-card-bg border-border-custom opacity-70 hover:opacity-100'}
+                `}
+            >
+                <div className="flex items-center justify-center bg-white rounded p-1 w-10 h-10 border border-border-custom shrink-0 pointer-events-none">
+                    <img 
+                        src={prod.image_url} 
+                        alt="" 
+                        draggable={false}
+                        className="max-h-full max-w-full object-contain pointer-events-none"
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=40&q=80' }}
+                    />
+                </div>
+                <div className="flex-1 min-w-0 pr-2 pointer-events-none">
+                    <span className="text-[9px] font-bold text-indigo-500 block uppercase tracking-wider truncate">{prod.brand || 'Γενικό'}</span>
+                    <strong className="text-xs font-semibold text-slate-800 dark:text-slate-100 block truncate">{prod.name}</strong>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5">
+                        {cheapest ? `Από €${cheapest.price.toFixed(2)}` : '-'}
+                    </span>
+                </div>
+                <div className="flex items-center shrink-0 pointer-events-none">
+                    <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        readOnly
+                        className="w-4 h-4 rounded text-indigo-500 border-slate-300 focus:ring-indigo-500 pointer-events-none"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function KallathakiApp() {
     // Theme state
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -1566,55 +1676,19 @@ export default function KallathakiApp() {
                                                 {/* Pantry Selection Grid */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-6">
                                                     {favorites.map(prod => {
-                                                        const isSelected = activeBasketIds.includes(prod.id);
-                                                        const cheapest = getCheapestRetailer(prod);
-                                                        return (
-                                                            <div 
-                                                                key={prod.id}
-                                                                onClick={() => toggleBasketItem(prod.id)}
-                                                                className={`
-                                                                    relative p-4 rounded-xl border transition cursor-pointer flex items-center gap-3 select-none
-                                                                    ${isSelected 
-                                                                        ? 'bg-indigo-500/5 border-indigo-500/45 dark:border-indigo-500/30 shadow-sm' 
-                                                                        : 'bg-input-custom border-transparent opacity-60 hover:opacity-100'}
-                                                                `}
-                                                            >
-                                                                <div className="flex items-center justify-center bg-white rounded p-1 w-10 h-10 border border-border-custom">
-                                                                    <img 
-                                                                        src={prod.image_url} 
-                                                                        alt="" 
-                                                                        className="max-h-full max-w-full object-contain"
-                                                                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=40&q=80' }}
-                                                                    />
-                                                                </div>
-                                                                <div className="flex-1 min-w-0 pr-6">
-                                                                    <span className="text-[9px] font-bold text-indigo-500 block uppercase tracking-wider truncate">{prod.brand || 'Γενικό'}</span>
-                                                                    <strong className="text-xs font-semibold text-slate-800 dark:text-slate-100 block truncate">{prod.name}</strong>
-                                                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5">
-                                                                        {cheapest ? `Από €${cheapest.price.toFixed(2)}` : '-'}
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex items-center shrink-0">
-                                                                    <input 
-                                                                        type="checkbox" 
-                                                                        checked={isSelected}
-                                                                        readOnly
-                                                                        className="w-4 h-4 rounded text-indigo-500 border-slate-300 focus:ring-indigo-500 pointer-events-none"
-                                                                    />
-                                                                </div>
-                                                                <button 
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        toggleFavorite(e, prod);
-                                                                    }}
-                                                                    className="absolute top-1.5 right-1.5 p-1 hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 rounded transition"
-                                                                    title="Αφαίρεση από Pantry"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            </div>
-                                                        );
-                                                    })}
+                                                         const isSelected = activeBasketIds.includes(prod.id);
+                                                         const cheapest = getCheapestRetailer(prod);
+                                                         return (
+                                                             <PantryItem
+                                                                 key={prod.id}
+                                                                 prod={prod}
+                                                                 isSelected={isSelected}
+                                                                 cheapest={cheapest}
+                                                                 toggleBasketItem={toggleBasketItem}
+                                                                 toggleFavorite={toggleFavorite}
+                                                             />
+                                                         );
+                                                     })}
                                                 </div>
                                             </div>
                                         ) : (
