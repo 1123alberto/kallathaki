@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MySuper.gr | Σύγκριση Τιμών Σούπερ Μάρκετ",
+  title: "Kallathaki.gr | Σύγκριση Τιμών Σούπερ Μάρκετ",
   description: "Βρείτε τις καλύτερες τιμές στα ελληνικά σούπερ μάρκετ. Υπολογίστε το φθηνότερο καλάθι αγορών (Single Store Run) ή βελτιστοποιήστε τις αγορές σας σε πολλά καταστήματα (Split-Trip).",
-  keywords: "supermarket, prices, greece, MySuper.gr, σούπερ μάρκετ, τιμές, καλάθι, σύγκριση",
+  keywords: "supermarket, prices, greece, Kallathaki.gr, καλαθάκι, σούπερ μάρκετ, τιμές, καλάθι, σύγκριση",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "MySuper.gr",
+    title: "Kallathaki.gr",
   },
   icons: {
     apple: "/icon-192.png",

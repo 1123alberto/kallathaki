@@ -58,7 +58,7 @@ export default function GuidePage() {
                     </Link>
                     <div className="flex items-center gap-2">
                         <ShoppingBasket className="w-6 h-6 text-indigo-500" />
-                        <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent">MySuper.gr</span>
+                        <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 to-emerald-500 bg-clip-text text-transparent">Kallathaki.gr</span>
                     </div>
                 </div>
 
@@ -92,7 +92,7 @@ export default function GuidePage() {
                         Πώς να Εξοικονομήσετε Έως και 30% στο Σούπερ Μάρκετ
                     </h1>
                     <p className="text-base md:text-lg text-slate-500 dark:text-slate-400 font-medium">
-                        Το MySuper.gr συνδέεται απευθείας με την επίσημη κυβερνητική βάση δεδομένων e-katanalotis για να σας προσφέρει άμεση σύγκριση τιμών και έξυπνα εργαλεία βελτιστοποίησης.
+                        Το Kallathaki.gr (Καλαθάκι) συνδέεται απευθείας με την επίσημη κυβερνητική βάση δεδομένων e-katanalotis για να σας προσφέρει άμεση σύγκριση τιμών και έξυπνα εργαλεία βελτιστοποίησης.
                     </p>
                 </div>
 
@@ -290,7 +290,7 @@ export default function GuidePage() {
 
             {/* Footer */}
             <footer className="p-6 border-t border-border-custom bg-panel-bg text-center text-xs text-slate-400 mt-auto">
-                <div>MySuper.gr &copy; {new Date().getFullYear()} — Με τη δύναμη του PosoKanei / e-katanalotis API.</div>
+                <div>Kallathaki.gr &copy; {new Date().getFullYear()} — Με τη δύναμη του PosoKanei / e-katanalotis API.</div>
             </footer>
 
         </div>

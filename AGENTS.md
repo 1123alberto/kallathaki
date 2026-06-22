@@ -1,4 +1,4 @@
-# Project Rules for AI Coding Assistants (MySuper.gr)
+# Project Rules for AI Coding Assistants (Kallathaki.gr)
 
 If you are an AI agent working on this codebase, please adhere to the following architectural constraints to prevent regressions and compile errors:
 

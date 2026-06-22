@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mysuper-cache-v1';
+const CACHE_NAME = 'kallathaki-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/icon-192.png',
@@ -41,12 +41,12 @@ self.addEventListener('fetch', (event) => {
 
 // Push notification listener
 self.addEventListener('push', (event) => {
-  let data = { title: 'MySuper.gr', body: 'Νέα προσφορά στα προϊόντα σας!' };
+  let data = { title: 'Kallathaki.gr', body: 'Νέα προσφορά στα προϊόντα σας!' };
   if (event.data) {
     try {
       data = event.data.json();
     } catch {
-      data = { title: 'MySuper.gr', body: event.data.text() };
+      data = { title: 'Kallathaki.gr', body: event.data.text() };
     }
   }
 

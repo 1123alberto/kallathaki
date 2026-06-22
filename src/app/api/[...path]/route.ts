@@ -1,4 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import categoriesFallback from './categories-fallback.json';
+import statsFallback from './stats-fallback.json';
+
+const GOV_API_URL = process.env.GOV_API_URL || 'https://api.posokanei.gov.gr';
 
 // In-memory cache to bypass Gov API rate-limiting (429)
 const apiCache = new Map<string, { data: unknown; timestamp: number }>();
@@ -11,7 +15,7 @@ export async function GET(
   const { path } = await params;
   const searchParams = req.nextUrl.searchParams.toString();
   const targetPath = path.join('/');
-  const url = `https://api.posokanei.gov.gr/${targetPath}${searchParams ? `?${searchParams}` : ''}`;
+  const url = `${GOV_API_URL}/${targetPath}${searchParams ? `?${searchParams}` : ''}`;
 
   // Check cache first
   const cached = apiCache.get(url);
@@ -36,6 +40,17 @@ export async function GET(
         console.warn(`Gov API returned ${response.status}, serving stale cache fallback for ${url}`);
         return NextResponse.json(cached.data);
       }
+
+      // Check if we can serve static fallback data
+      if (targetPath === 'meta/categories/tree') {
+        console.warn(`Gov API returned ${response.status} for categories tree. Serving local static fallback.`);
+        return NextResponse.json(categoriesFallback);
+      }
+      if (targetPath === 'meta/stats') {
+        console.warn(`Gov API returned ${response.status} for stats. Serving local static fallback.`);
+        return NextResponse.json(statsFallback);
+      }
+
       return NextResponse.json({ error: `Gov API returned ${response.status}` }, { status: response.status });
     }
 
@@ -50,6 +65,17 @@ export async function GET(
     if (cached) {
       return NextResponse.json(cached.data);
     }
+
+    // Check if we can serve static fallback data on error
+    if (targetPath === 'meta/categories/tree') {
+      console.warn(`Failed to fetch categories tree from Gov API. Serving local static fallback.`);
+      return NextResponse.json(categoriesFallback);
+    }
+    if (targetPath === 'meta/stats') {
+      console.warn(`Failed to fetch stats from Gov API. Serving local static fallback.`);
+      return NextResponse.json(statsFallback);
+    }
+
     return NextResponse.json({ error: 'Failed to fetch from Gov API' }, { status: 500 });
   }
 }
@@ -60,7 +86,7 @@ export async function POST(
 ) {
   const { path } = await params;
   const targetPath = path.join('/');
-  const url = `https://api.posokanei.gov.gr/${targetPath}`;
+  const url = `${GOV_API_URL}/${targetPath}`;
 
   try {
     const body = await req.json();

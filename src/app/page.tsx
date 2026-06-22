@@ -138,7 +138,7 @@ const sanitizeProduct = (prod: RawProduct): Product => {
     } as Product;
 };
 
-export default function MySuperApp() {
+export default function KallathakiApp() {
     // Theme state
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
     const [mounted, setMounted] = useState(false);
@@ -776,7 +776,7 @@ export default function MySuperApp() {
     // Generate Share Message Text
     const shareMessageText = useMemo(() => {
         if (activeBasketProducts.length === 0) return '';
-        let text = `🛒 MySuper.gr - Λίστα Αγορών\n`;
+        let text = `🛒 Kallathaki.gr - Λίστα Αγορών\n`;
         text += `================================\n\n`;
 
         text += `📋 Προϊόντα προς αγορά:\n`;
@@ -859,7 +859,7 @@ export default function MySuperApp() {
 
     const copyLink = () => {
         navigator.clipboard.writeText(webShareLink).then(() => {
-            alert("Ο σύνδεσμος MySuper.gr αντιγράφηκε στο πρόχειρο!");
+            alert("Ο σύνδεσμος Kallathaki.gr αντιγράφηκε στο πρόχειρο!");
         });
     };
 
@@ -948,7 +948,7 @@ export default function MySuperApp() {
                             title="Επιστροφή στην Αρχική"
                         >
                             <ShoppingBasket className="w-6 h-6 text-indigo-500" />
-                            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">MySuper.gr</h1>
+                            <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">Kallathaki.gr</h1>
                         </button>
                         <button className="md:hidden p-1 text-slate-500 hover:bg-input-custom rounded-lg" onClick={() => setIsSidebarOpen(false)}>
                             <X className="w-5 h-5" />
@@ -1057,7 +1057,7 @@ export default function MySuperApp() {
                                 title="Αρχική"
                             >
                                 <ShoppingBasket className="w-6 h-6 text-indigo-500" />
-                                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">MySuper.gr</span>
+                                <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">Kallathaki.gr</span>
                             </button>
                             
                             <div className="relative flex-1 max-w-md">
@@ -2013,7 +2013,7 @@ export default function MySuperApp() {
                         <div className="border-t border-border-custom my-2"></div>
 
                         <div className="space-y-3">
-                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Web Link (για εισαγωγή στο MySuper.gr)</div>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Web Link (για εισαγωγή στο Kallathaki.gr)</div>
                             <input 
                                 type="text"
                                 readOnly

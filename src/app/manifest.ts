@@ -3,14 +3,14 @@ import type { MetadataRoute } from 'next';
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
-    name: 'MySuper.gr | Σύγκριση Τιμών Σούπερ Μάρκετ',
-    short_name: 'MySuper.gr',
+    name: 'Kallathaki.gr | Σύγκριση Τιμών Σούπερ Μάρκετ',
+    short_name: 'Kallathaki.gr',
     description: 'Βρείτε τις καλύτερες τιμές στα ελληνικά σούπερ μάρκετ. Υπολογίστε το φθηνότερο καλάθι αγορών ή βελτιστοποιήστε τις αγορές σας σε πολλά καταστήματα.',
     start_url: '/',
     display: 'standalone',
     categories: ['shopping', 'utilities'],
     background_color: '#0f172a',
-    theme_color: '#4f46e5',
+    theme_color: '#047857',
     orientation: 'portrait',
     icons: [
       {
