@@ -1077,14 +1077,16 @@ export default function KallathakiApp() {
                                     value={searchTerm}
                                     onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                     placeholder="Αναζήτηση προϊόντων (π.χ. γάλα, φέτα, ρύζι)..."
+                                    aria-label="Αναζήτηση προϊόντων"
                                     className="w-full pl-9 pr-10 py-2 text-base md:text-sm bg-input-custom border border-transparent focus:border-indigo-500 focus:bg-background rounded-xl outline-none transition text-foreground"
-                                />
+                                  />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                                     {searchTerm && (
                                         <button 
                                             onClick={() => setSearchTerm('')} 
                                             className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
                                             title="Καθαρισμός αναζήτησης"
+                                            aria-label="Καθαρισμός αναζήτησης"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
@@ -1099,6 +1101,7 @@ export default function KallathakiApp() {
                                 onClick={toggleTheme} 
                                 className="p-2.5 hover:bg-input-custom border border-border-custom rounded-xl transition text-foreground"
                                 title="Αλλαγή Θέματος"
+                                aria-label="Αλλαγή Θέματος"
                             >
                                 {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
                             </button>
@@ -2009,6 +2012,7 @@ export default function KallathakiApp() {
                             <textarea 
                                 readOnly 
                                 value={shareMessageText}
+                                aria-label="Κείμενο λίστας αγορών για αντιγραφή"
                                 className="w-full h-56 p-3 text-xs bg-input-custom border border-border-custom rounded-xl outline-none resize-none font-sans leading-relaxed text-slate-700 dark:text-slate-200"
                             />
                             <button 
@@ -2028,6 +2032,7 @@ export default function KallathakiApp() {
                                 type="text"
                                 readOnly
                                 value={webShareLink}
+                                aria-label="Σύνδεσμος λίστας αγορών για αντιγραφή"
                                 className="w-full p-3 text-xs bg-input-custom border border-border-custom rounded-xl outline-none text-slate-750 dark:text-slate-250 truncate"
                             />
                             <button 
