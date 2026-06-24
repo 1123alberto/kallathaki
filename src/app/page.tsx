@@ -960,7 +960,7 @@ export default function KallathakiApp() {
                             <ShoppingBasket className="w-6 h-6 text-indigo-500" />
                             <h1 className="text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">Kallathaki</h1>
                         </button>
-                        <button className="md:hidden p-1 text-slate-500 hover:bg-input-custom rounded-lg" onClick={() => setIsSidebarOpen(false)}>
+                        <button className="md:hidden p-1 text-slate-500 hover:bg-input-custom rounded-lg" onClick={() => setIsSidebarOpen(false)} aria-label="Κλείσιμο μενού">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -1058,7 +1058,7 @@ export default function KallathakiApp() {
                     <header className="p-4 border-b border-border-custom bg-panel-bg flex flex-wrap gap-4 items-center justify-between">
                         
                         <div className="flex items-center gap-3 flex-1 min-w-[200px]">
-                            <button className="md:hidden p-2 hover:bg-input-custom rounded-xl" onClick={() => setIsSidebarOpen(true)}>
+                            <button className="md:hidden p-2 hover:bg-input-custom rounded-xl" onClick={() => setIsSidebarOpen(true)} aria-label="Άνοιγμα μενού">
                                 <Menu className="w-5 h-5" />
                             </button>
                             <button 
@@ -1996,7 +1996,7 @@ export default function KallathakiApp() {
                 `}>
                     <div className="p-6 border-b border-border-custom flex items-center justify-between">
                         <h3 className="text-base font-bold flex items-center gap-1.5"><Share2 className="w-5 h-5 text-emerald-500" /><span>Κοινοποίηση Λίστας</span></h3>
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg" onClick={() => setIsShareOpen(false)}>
+                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg" onClick={() => setIsShareOpen(false)} aria-label="Κλείσιμο κοινής χρήσης">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -2052,7 +2052,7 @@ export default function KallathakiApp() {
                             <MapPin className="w-5 h-5 text-indigo-500" />
                             <span>Τοποθεσία Καταστήματος</span>
                         </h3>
-                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-slate-500" onClick={() => setActiveMapRetailer(null)}>
+                        <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg text-slate-500" onClick={() => setActiveMapRetailer(null)} aria-label="Κλείσιμο χάρτη">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
