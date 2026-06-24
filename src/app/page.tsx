@@ -9,7 +9,6 @@ import {
     Store, Percent, Trophy, Info, PiggyBank, RefreshCw, Menu, ShoppingBasket,
     MapPin, Home, Camera, Bell
 } from 'lucide-react';
-import Chart from 'chart.js/auto';
 import dynamic from 'next/dynamic';
 
 const BarcodeScannerModal = dynamic(() => import('../components/BarcodeScannerModal'), { ssr: false });
@@ -308,7 +307,7 @@ export default function KallathakiApp() {
 
     // Chart ref
     const chartRef = useRef<HTMLCanvasElement>(null);
-    const chartInstance = useRef<Chart | null>(null);
+    const chartInstance = useRef<any>(null);
 
     // Initialize Theme and LocalStorage state
     useEffect(() => {
@@ -688,6 +687,8 @@ export default function KallathakiApp() {
     useEffect(() => {
         if (!selectedProduct || !chartRef.current || !isDetailOpen) return;
 
+        let activeChart: any = null;
+
         // Generate mockup chart data because the API historical endpoints require specific authorization or range parameters
         const labels = ['1 Μαΐ', '10 Μαΐ', '20 Μαΐ', '1 Ιουν', '10 Ιουν', '17 Ιουν'];
         const datasets = ALLOWED_RETAILERS.map(storeId => {
@@ -723,47 +724,55 @@ export default function KallathakiApp() {
             };
         }).filter(ds => ds.data.some(p => p !== null));
 
-        if (chartInstance.current) {
-            chartInstance.current.destroy();
-        }
+        // Dynamically import Chart to reduce initial JS load
+        import('chart.js/auto').then(({ default: Chart }) => {
+            if (!chartRef.current) return;
+            if (chartInstance.current) {
+                chartInstance.current.destroy();
+            }
 
-        const ctx = chartRef.current.getContext('2d');
-        if (ctx) {
-            chartInstance.current = new Chart(ctx, {
-                type: 'line',
-                data: { labels, datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: theme === 'dark' ? '#f8fafc' : '#0f172a',
-                                font: { family: 'inherit', size: 11 }
+            const ctx = chartRef.current.getContext('2d');
+            if (ctx) {
+                activeChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels, datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: theme === 'dark' ? '#f8fafc' : '#0f172a',
+                                    font: { family: 'inherit', size: 11 }
+                                }
                             }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            grid: { color: theme === 'dark' ? '#33415533' : '#e2e8f088' },
-                            ticks: { color: theme === 'dark' ? '#94a3b8' : '#64748b' }
                         },
-                        y: {
-                            grid: { color: theme === 'dark' ? '#33415533' : '#e2e8f088' },
-                            ticks: { 
-                                color: theme === 'dark' ? '#94a3b8' : '#64748b',
-                                callback: (val) => `€${Number(val).toFixed(2)}`
+                        scales: {
+                            x: {
+                                grid: { color: theme === 'dark' ? '#33415533' : '#e2e8f088' },
+                                ticks: { color: theme === 'dark' ? '#94a3b8' : '#64748b' }
+                            },
+                            y: {
+                                grid: { color: theme === 'dark' ? '#33415533' : '#e2e8f088' },
+                                ticks: { 
+                                    color: theme === 'dark' ? '#94a3b8' : '#64748b',
+                                    callback: (val) => `€${Number(val).toFixed(2)}`
+                                }
                             }
                         }
                     }
-                }
-            });
-        }
+                });
+                chartInstance.current = activeChart;
+            }
+        });
 
         return () => {
             if (chartInstance.current) {
                 chartInstance.current.destroy();
                 chartInstance.current = null;
+            }
+            if (activeChart) {
+                activeChart.destroy();
             }
         };
     }, [selectedProduct, isDetailOpen, theme]);
