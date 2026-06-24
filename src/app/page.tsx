@@ -1108,13 +1108,13 @@ export default function KallathakiApp() {
 
                             <div className="flex bg-input-custom p-1 rounded-xl">
                                 <button 
-                                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'products' ? 'bg-background shadow text-indigo-500' : 'text-slate-500 hover:text-foreground'}`}
+                                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition ${activeTab === 'products' ? 'bg-background shadow text-indigo-800 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-400 hover:text-foreground'}`}
                                     onClick={() => setActiveTab('products')}
                                 >
                                     Προϊόντα
                                 </button>
                                 <button 
-                                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 ${activeTab === 'favorites' ? 'bg-background shadow text-indigo-500' : 'text-slate-500 hover:text-foreground'}`}
+                                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition flex items-center gap-1.5 ${activeTab === 'favorites' ? 'bg-background shadow text-indigo-800 dark:text-indigo-400' : 'text-slate-700 dark:text-slate-400 hover:text-foreground'}`}
                                     onClick={() => setActiveTab('favorites')}
                                 >
                                     <ShoppingBasket className="w-3.5 h-3.5" />
@@ -1151,9 +1151,9 @@ export default function KallathakiApp() {
                                             <div className="mt-6 flex flex-wrap gap-4">
                                                 <Link 
                                                     href="/guide" 
-                                                    className="inline-flex items-center gap-2 px-6 py-3.5 bg-white text-indigo-700 hover:bg-indigo-50 font-bold rounded-2xl shadow-md transition duration-250 cursor-pointer text-sm"
+                                                    className="inline-flex items-center gap-2 px-6 py-3.5 bg-white text-indigo-800 hover:bg-indigo-50 font-bold rounded-2xl shadow-md transition duration-250 cursor-pointer text-sm"
                                                 >
-                                                    <Sparkles className="w-4 h-4 text-indigo-500" />
+                                                    <Sparkles className="w-4 h-4 text-indigo-800" />
                                                     <span>{"\u03a0\u03ce\u03c2 \u039b\u03b5\u03b9\u03c4\u03bf\u03c5\u03c1\u03b3\u03b5\u03af (\u039f\u03b4\u03b7\u03b3\u03cc\u03c2 \u03a7\u03c1\u03ae\u03c3\u03b7\u03c2)"}</span>
                                                 </Link>
                                                 <button 
@@ -1208,9 +1208,9 @@ export default function KallathakiApp() {
                                                         {stat.icon}
                                                     </div>
                                                     <div>
-                                                        <span className="text-xs text-slate-450 block font-medium">{stat.label}</span>
+                                                        <span className="text-xs text-slate-650 dark:text-slate-400 block font-medium">{stat.label}</span>
                                                         <strong className="text-xl font-extrabold text-slate-800 dark:text-slate-100 block mt-1">{stat.value}</strong>
-                                                        <span className="text-[10px] text-slate-400 mt-0.5 block">{stat.desc}</span>
+                                                        <span className="text-[10px] text-slate-650 dark:text-slate-400 mt-0.5 block">{stat.desc}</span>
                                                     </div>
                                                 </div>
                                             ))}
@@ -2116,7 +2116,7 @@ export default function KallathakiApp() {
                             resetFilters();
                         }}
                         className={`flex flex-col items-center gap-1 transition ${
-                            activeTab === 'products' ? 'text-indigo-500 font-bold' : 'text-slate-500 hover:text-foreground'
+                            activeTab === 'products' ? 'text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
                         }`}
                     >
                         <Home className="w-5 h-5" />
@@ -2124,14 +2124,14 @@ export default function KallathakiApp() {
                     </button>
                     <button 
                         onClick={() => setIsSidebarOpen(true)}
-                        className="flex flex-col items-center gap-1 text-slate-500 hover:text-foreground transition"
+                        className="flex flex-col items-center gap-1 text-slate-650 dark:text-slate-400 hover:text-foreground transition"
                     >
                         <Menu className="w-5 h-5" />
                         <span className="text-[10px]">Κατηγορίες</span>
                     </button>
                     <button 
                         onClick={() => setIsScannerOpen(true)}
-                        className="flex flex-col items-center gap-1 text-slate-500 hover:text-indigo-500 transition"
+                        className="flex flex-col items-center gap-1 text-slate-650 dark:text-slate-400 hover:text-indigo-800 dark:hover:text-indigo-400 transition"
                     >
                         <Camera className="w-5 h-5" />
                         <span className="text-[10px]">Σάρωση</span>
@@ -2139,7 +2139,7 @@ export default function KallathakiApp() {
                     <button 
                         onClick={() => setActiveTab('favorites')}
                         className={`flex flex-col items-center gap-1 transition relative ${
-                            activeTab === 'favorites' ? 'text-indigo-500 font-bold' : 'text-slate-500 hover:text-foreground'
+                            activeTab === 'favorites' ? 'text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
                         }`}
                     >
                         <ShoppingBasket className="w-5 h-5" />
