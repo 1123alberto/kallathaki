@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/push/sale-alerts/check",
+      "schedule": "0 */6 * * *"
+    }
+  ]
+}

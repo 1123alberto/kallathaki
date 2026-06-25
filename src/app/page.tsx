@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { 
     Search, Moon, Sun, Heart, Trash2, Share2, Copy, Link as LinkIcon, 
@@ -33,6 +33,19 @@ const formatProductUpdatedAt = (product: Product) => {
     if (dates.length === 0) return '';
     const latest = dates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
     return formatGreekDate(latest);
+};
+
+const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; i += 1) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+
+    return outputArray;
 };
 
 // Allowed 6 supermarkets
@@ -183,6 +196,12 @@ export default function KallathakiApp() {
         return favorites.filter(p => activeBasketIds.includes(p.id));
     }, [favorites, activeBasketIds]);
 
+    const discountedBasketProducts = useMemo(() => {
+        return activeBasketProducts.filter((product) =>
+            product.retailer_prices.some((price) => price.is_discount || Number(price.discount_percentage || 0) > 0)
+        );
+    }, [activeBasketProducts]);
+
     useEffect(() => {
         setShowOptimizerResults(false);
     }, [activeBasketIds]);
@@ -210,21 +229,37 @@ export default function KallathakiApp() {
 
     const [pushSupported, setPushSupported] = useState(false);
     const [isSubscribed, setIsSubscribed] = useState(false);
+    const [pushStatus, setPushStatus] = useState('');
 
-    const urlBase64ToUint8Array = (base64String: string) => {
-        const padding = '='.repeat((4 - base64String.length % 4) % 4);
-        const base64 = (base64String + padding)
-            .replace(/-/g, '+')
-            .replace(/_/g, '/');
+    const basketProductsForPush = useMemo(() => activeBasketProducts.map((product) => ({
+        id: product.id,
+        name: product.name,
+        brand: product.brand,
+        image_url: product.image_url,
+        updated_at: product.updated_at,
+        retailer_prices: product.retailer_prices
+    })), [activeBasketProducts]);
 
-        const rawData = window.atob(base64);
-        const outputArray = new Uint8Array(rawData.length);
+    const syncPushBasket = useCallback(async (subscription?: PushSubscription | null) => {
+        if (!pushSupported) return;
+        const registration = await navigator.serviceWorker.ready;
+        const currentSubscription = subscription || await registration.pushManager.getSubscription();
+        if (!currentSubscription) return;
 
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i);
+        const response = await fetch('/api/push/subscriptions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subscription: currentSubscription.toJSON(),
+                basketProducts: basketProductsForPush
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Push basket sync failed: ${response.status} ${errorText}`);
         }
-        return outputArray;
-    };
+    }, [basketProductsForPush, pushSupported]);
 
     const subscribeToPush = async () => {
         if (!pushSupported) return;
@@ -235,21 +270,27 @@ export default function KallathakiApp() {
                 return;
             }
 
-            const registration = await navigator.serviceWorker.ready;
-            const vapidPublicKey = 'BEl62iUZGStZOy4mJJw92z6r1wCr5T0FC21B_a5vB52yZ10Mh20Hh88S_nL1u5Yd_e3yB-8e9Z18h20z52yZ10M';
-            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+            const keyResponse = await fetch('/api/push/public-key', { cache: 'no-store' });
+            if (!keyResponse.ok) {
+                setPushStatus('Οι ειδοποιήσεις προσφορών δεν είναι ακόμη έτοιμες στον server.');
+                return;
+            }
 
-            const subscription = await registration.pushManager.subscribe({
+            const { publicKey } = await keyResponse.json();
+            const registration = await navigator.serviceWorker.ready;
+            const existingSubscription = await registration.pushManager.getSubscription();
+            const subscription = existingSubscription || await registration.pushManager.subscribe({
                 userVisibleOnly: true,
-                applicationServerKey: convertedVapidKey
+                applicationServerKey: urlBase64ToUint8Array(publicKey)
             });
 
-            console.log('Push Subscription:', JSON.stringify(subscription));
+            await syncPushBasket(subscription);
+            localStorage.setItem('kallathaki_sale_notifications', 'true');
             setIsSubscribed(true);
-            alert('Ενεργοποιήθηκαν οι ειδοποιήσεις για προσφορές!');
+            setPushStatus('Οι ειδοποιήσεις προσφορών είναι ενεργές.');
         } catch (error) {
-            console.error('Failed to subscribe:', error);
-            alert('Σφάλμα κατά την ενεργοποίηση ειδοποιήσεων: ' + error);
+            console.error('Failed to enable sale notifications:', error);
+            alert('Σφάλμα κατά την ενεργοποίηση ειδοποιήσεων. Δοκιμάστε ξανά από τις ρυθμίσεις του browser.');
         }
     };
 
@@ -258,14 +299,29 @@ export default function KallathakiApp() {
             const registration = await navigator.serviceWorker.ready;
             const subscription = await registration.pushManager.getSubscription();
             if (subscription) {
+                await fetch('/api/push/subscriptions', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ endpoint: subscription.endpoint })
+                });
                 await subscription.unsubscribe();
-                setIsSubscribed(false);
-                alert('Απενεργοποιήθηκαν οι ειδοποιήσεις.');
             }
+
+            localStorage.setItem('kallathaki_sale_notifications', 'false');
+            setIsSubscribed(false);
+            setPushStatus('');
+            alert('Απενεργοποιήθηκαν οι ειδοποιήσεις για προσφορές.');
         } catch (error) {
-            console.error('Failed to unsubscribe:', error);
+            console.error('Failed to disable sale notifications:', error);
         }
     };
+
+    useEffect(() => {
+        if (!mounted || !isSubscribed || !pushSupported) return;
+        syncPushBasket().catch((error) => {
+            console.error('Failed to update push basket:', error);
+        });
+    }, [isSubscribed, mounted, pushSupported, syncPushBasket]);
 
     const [totalProductsCount, setTotalProductsCount] = useState<number>(0);
     const [loadingProducts, setLoadingProducts] = useState(false);
@@ -343,7 +399,7 @@ export default function KallathakiApp() {
 
     // Chart ref
     const chartRef = useRef<HTMLCanvasElement>(null);
-    const chartInstance = useRef<any>(null);
+    const chartInstance = useRef<{ destroy: () => void } | null>(null);
 
     // Initialize Theme and LocalStorage state
     useEffect(() => {
@@ -391,15 +447,23 @@ export default function KallathakiApp() {
             if (window.location.search.includes('action=scan')) {
                 setIsScannerOpen(true);
             }
+            if (window.location.hash === '#basket') {
+                setActiveTab('favorites');
+                setFavoritesSubTab('basket');
+            }
 
-            // Check Push Notification support
-            if ('serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window) {
+            // Check sale notification support
+            if ('serviceWorker' in navigator && 'Notification' in window && 'PushManager' in window) {
                 setPushSupported(true);
-                navigator.serviceWorker.ready.then((registration) => {
-                    registration.pushManager.getSubscription().then((subscription) => {
-                        setIsSubscribed(!!subscription);
+                navigator.serviceWorker.ready
+                    .then((registration) => registration.pushManager.getSubscription())
+                    .then((subscription) => {
+                        setIsSubscribed(Boolean(subscription) && Notification.permission === 'granted');
+                    })
+                    .catch((error) => {
+                        console.error('Failed to read push subscription:', error);
+                        setIsSubscribed(localStorage.getItem('kallathaki_sale_notifications') === 'true' && Notification.permission === 'granted');
                     });
-                });
             }
             
             setMounted(true);
@@ -732,7 +796,7 @@ export default function KallathakiApp() {
     useEffect(() => {
         if (!selectedProduct || !chartRef.current || !isDetailOpen) return;
 
-        let activeChart: any = null;
+        let activeChart: { destroy: () => void } | null = null;
 
         // Generate mockup chart data because the API historical endpoints require specific authorization or range parameters
         const labels = ['1 Μαΐ', '10 Μαΐ', '20 Μαΐ', '1 Ιουν', '10 Ιουν', '17 Ιουν'];
@@ -1829,8 +1893,16 @@ export default function KallathakiApp() {
                                                             Ειδοποιήσεις για Προσφορές
                                                         </h4>
                                                         <p className="text-[11px] text-slate-500 mt-0.5">
-                                                            Λάβετε αυτόματες ειδοποιήσεις όταν κάποιο προϊόν του καλαθιού σας έχει έκπτωση.
+                                                            Λάβετε ειδοποίηση όταν προϊόντα του καλαθιού σας έχουν ένδειξη προσφοράς.
+                                                            {discountedBasketProducts.length > 0 && (
+                                                                <span className="font-bold text-emerald-600 dark:text-emerald-400"> Τώρα: {discountedBasketProducts.length} σε προσφορά.</span>
+                                                            )}
                                                         </p>
+                                                        {pushStatus && (
+                                                            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 mt-1">
+                                                                {pushStatus}
+                                                            </p>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <button
