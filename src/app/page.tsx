@@ -7,7 +7,7 @@ import {
     Search, Moon, Sun, Heart, Trash2, Share2, Copy, Link as LinkIcon, 
     X, Sparkles, ShoppingBag, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid,
     Store, Percent, Trophy, Info, PiggyBank, RefreshCw, Menu, ShoppingBasket,
-    MapPin, Home, Camera, Bell, ShieldCheck, Clock3
+    MapPin, Home, Camera, Bell, ShieldCheck, Clock3, UserCircle
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -314,7 +314,7 @@ export default function KallathakiApp() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const sortBy = 'priceAsc';
-    const [activeTab, setActiveTab] = useState<'products' | 'favorites'>('products');
+    const [activeTab, setActiveTab] = useState<'products' | 'favorites' | 'offers' | 'profile'>('products');
 
     // UI state
     const [openCategories, setOpenCategories] = useState<{ [key: string]: boolean }>({});
@@ -1704,6 +1704,107 @@ export default function KallathakiApp() {
                                     )}
                                 </div>
                             )
+                        ) : activeTab === 'offers' ? (
+                            <div className="space-y-8 pb-12">
+                                <section className="bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-xl">
+                                    <div className="max-w-2xl">
+                                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 text-[11px] font-bold mb-4">
+                                            <Percent className="w-3.5 h-3.5" />
+                                            Προσφορές που αξίζουν
+                                        </span>
+                                        <h2 className="text-3xl font-black tracking-tight">Κερδίστε περισσότερα από κάθε καλάθι</h2>
+                                        <p className="text-sm text-white/80 mt-2">
+                                            Ανακαλύψτε προϊόντα με ένδειξη προσφοράς και προσθέστε τα στο καλάθι σας για άμεση βελτιστοποίηση.
+                                        </p>
+                                    </div>
+                                </section>
+
+                                {products.filter((product) => product.retailer_prices.some((price) => price.is_discount)).length === 0 ? (
+                                    <div className="bg-card-bg border border-border-custom rounded-3xl p-8 text-center">
+                                        <Percent className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+                                        <h3 className="text-lg font-black">Δεν έχουν φορτωθεί προσφορές ακόμη</h3>
+                                        <p className="text-sm text-slate-500 mt-2">Ξεκινήστε με μια αναζήτηση ή επιλέξτε κατηγορία για να εμφανίσουμε σχετικές ευκαιρίες.</p>
+                                        <button
+                                            onClick={() => setActiveTab('products')}
+                                            className="mt-5 px-5 py-3 bg-indigo-500 text-white rounded-2xl text-sm font-black"
+                                        >
+                                            Αναζήτηση προϊόντων
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                                        {[
+                                            { title: 'Μεγαλύτερες εκπτώσεις', subtitle: 'Προϊόντα με εμφανή προσφορά σήμερα' },
+                                            { title: 'Προτεινόμενες προσφορές', subtitle: 'Ευκαιρίες από τις πρόσφατες αναζητήσεις σας' }
+                                        ].map((section) => (
+                                            <div key={section.title} className="bg-card-bg border border-border-custom rounded-3xl p-5 shadow-sm">
+                                                <h3 className="text-base font-black text-slate-850 dark:text-slate-100">{section.title}</h3>
+                                                <p className="text-xs text-slate-500 mt-1 mb-4">{section.subtitle}</p>
+                                                <div className="space-y-3">
+                                                    {products.filter((product) => product.retailer_prices.some((price) => price.is_discount)).slice(0, 5).map((product) => {
+                                                        const cheapest = getCheapestRetailer(product);
+                                                        return (
+                                                            <button
+                                                                key={`${section.title}-${product.id}`}
+                                                                onClick={() => showProductDetails(product)}
+                                                                className="w-full flex items-center gap-3 p-3 rounded-2xl bg-input-custom hover:bg-indigo-500/10 transition text-left"
+                                                            >
+                                                                <img src={product.image_url} alt="" className="w-12 h-12 rounded-xl object-contain bg-white p-1" />
+                                                                <div className="flex-1 min-w-0">
+                                                                    <div className="text-xs font-black truncate">{product.name}</div>
+                                                                    <div className="text-[10px] text-slate-500 font-bold">{product.brand || product.category}</div>
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <div className="text-sm font-black text-emerald-600">€{(cheapest?.price || product.price_stats.min_price || 0).toFixed(2)}</div>
+                                                                    <div className="text-[10px] font-black text-white bg-emerald-500 px-2 py-0.5 rounded-full">Προσφορά</div>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : activeTab === 'profile' ? (
+                            <div className="space-y-8 pb-12">
+                                <section className="bg-card-bg border border-border-custom rounded-3xl p-6 sm:p-8 shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                                            <UserCircle className="w-9 h-9" />
+                                        </div>
+                                        <div>
+                                            <h2 className="text-2xl font-black text-slate-850 dark:text-slate-100">Το Kallathaki σας</h2>
+                                            <p className="text-sm text-slate-500 mt-1">Αποθηκευμένα καλάθια, αγαπημένα προϊόντα και ιστορικό αγορών.</p>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                                    {[
+                                        { title: 'Αγαπημένα προϊόντα', value: favorites.length, text: 'Προϊόντα που έχετε κρατήσει για επόμενες αγορές.', icon: <Heart className="w-5 h-5" /> },
+                                        { title: 'Ενεργό καλάθι', value: activeBasketProducts.length, text: 'Προϊόντα έτοιμα για βελτιστοποίηση.', icon: <ShoppingBasket className="w-5 h-5" /> },
+                                        { title: 'Εκτιμώμενη εξοικονόμηση', value: `€${basketOptimizer.bestPossibleSaving.toFixed(2)}`, text: 'Με βάση το τρέχον καλάθι.', icon: <PiggyBank className="w-5 h-5" /> }
+                                    ].map((item) => (
+                                        <div key={item.title} className="bg-card-bg border border-border-custom rounded-3xl p-5 shadow-sm">
+                                            <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center mb-4">{item.icon}</div>
+                                            <div className="text-sm font-black text-slate-850 dark:text-slate-100">{item.title}</div>
+                                            <div className="text-2xl font-black text-emerald-600 mt-1">{item.value}</div>
+                                            <p className="text-xs text-slate-500 mt-2">{item.text}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="bg-card-bg border border-border-custom rounded-3xl p-5 shadow-sm divide-y divide-border-custom">
+                                    {['Αποθηκευμένα καλάθια', 'Ιστορικό αγορών', 'Αγαπημένα σούπερ μάρκετ', 'Ρυθμίσεις'].map((label) => (
+                                        <button key={label} className="w-full min-h-14 flex items-center justify-between text-left text-sm font-bold text-slate-750 dark:text-slate-200">
+                                            <span>{label}</span>
+                                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         ) : (
                             // FAVORITES & BASKET OPTIMIZER VIEW
                             <div className="space-y-8">
@@ -2505,7 +2606,7 @@ export default function KallathakiApp() {
                 </div>
 
                 {/* Mobile Bottom Navigation Bar */}
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-35 bg-sidebar-bg/95 backdrop-blur border-t border-border-custom px-3 pt-2 pb-[calc(0.6rem+env(safe-area-inset-bottom))] grid grid-cols-4 shadow-[0_-10px_30px_rgba(15,23,42,0.08)]">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-35 bg-sidebar-bg/95 backdrop-blur border-t border-border-custom px-2 pt-2 pb-[calc(0.6rem+env(safe-area-inset-bottom))] grid grid-cols-5 shadow-[0_-10px_30px_rgba(15,23,42,0.08)]">
                     <button 
                         onClick={() => {
                             setActiveTab('products');
@@ -2515,36 +2616,55 @@ export default function KallathakiApp() {
                             activeTab === 'products' ? 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
                         }`}
                     >
-                        <Home className="w-5 h-5" />
-                        <span className="text-[10px]">Αρχική</span>
+                        <Search className="w-5 h-5" />
+                        <span className="text-[10px]">Search</span>
                     </button>
                     <button 
-                        onClick={() => setIsSidebarOpen(true)}
-                        className="min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl text-slate-650 dark:text-slate-400 hover:text-foreground transition active:scale-95"
-                    >
-                        <Menu className="w-5 h-5" />
-                        <span className="text-[10px]">Κατηγορίες</span>
-                    </button>
-                    <button 
-                        onClick={() => setIsScannerOpen(true)}
-                        className="min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl text-slate-650 dark:text-slate-400 hover:text-indigo-800 dark:hover:text-indigo-400 transition active:scale-95"
-                    >
-                        <Camera className="w-5 h-5" />
-                        <span className="text-[10px]">Σάρωση</span>
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('favorites')}
+                        onClick={() => {
+                            setActiveTab('favorites');
+                            setFavoritesSubTab('basket');
+                            setShowOptimizerResults(false);
+                        }}
                         className={`min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl transition relative active:scale-95 ${
-                            activeTab === 'favorites' ? 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
+                            activeTab === 'favorites' && favoritesSubTab === 'basket' && !showOptimizerResults ? 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
                         }`}
                     >
                         <ShoppingBasket className="w-5 h-5" />
-                        <span className="text-[10px]">Καλάθι</span>
+                        <span className="text-[10px]">Basket</span>
                         {activeBasketIds.length > 0 && (
-                            <span className="absolute top-1 right-3 bg-emerald-500 text-white text-[10px] font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center shadow-md ring-2 ring-sidebar-bg">
+                            <span className="absolute top-1 right-2 bg-emerald-500 text-white text-[10px] font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center shadow-md ring-2 ring-sidebar-bg">
                                 {activeBasketIds.length}
                             </span>
                         )}
+                    </button>
+                    <button 
+                        onClick={() => {
+                            setActiveTab('favorites');
+                            setFavoritesSubTab('basket');
+                            setShowOptimizerResults(true);
+                        }}
+                        className="min-h-16 -mt-5 flex flex-col items-center justify-center gap-1 rounded-3xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 transition active:scale-95 font-black"
+                    >
+                        <Trophy className="w-5 h-5 fill-white" />
+                        <span className="text-[10px]">Optimize</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('offers')}
+                        className={`min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl transition active:scale-95 ${
+                            activeTab === 'offers' ? 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
+                        }`}
+                    >
+                        <Percent className="w-5 h-5" />
+                        <span className="text-[10px]">Offers</span>
+                    </button>
+                    <button 
+                        onClick={() => setActiveTab('profile')}
+                        className={`min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl transition active:scale-95 ${
+                            activeTab === 'profile' ? 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
+                        }`}
+                    >
+                        <UserCircle className="w-5 h-5" />
+                        <span className="text-[10px]">Profile</span>
                     </button>
                 </nav>
 
