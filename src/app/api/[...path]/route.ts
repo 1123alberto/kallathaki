@@ -157,19 +157,21 @@ function productMatchesSearch(product: Product, payload: ProductSearchPayload) {
   const title = payload.title?.trim().toLocaleLowerCase('el-GR');
   const categoryId = payload.category_id?.trim();
 
-  if (title) {
-    const haystack = [product.name, product.title, product.brand, product.category, product.subcategory]
-      .filter(Boolean)
-      .join(' ')
-      .toLocaleLowerCase('el-GR');
-    if (!haystack.includes(title)) return false;
-  }
-
   if (categoryId && !(product.category_ids || []).includes(categoryId)) {
     return false;
   }
 
+  if (title && !productMatchesTitle(product, title)) return false;
+
   return true;
+}
+
+function productMatchesTitle(product: Product, title: string) {
+  const haystack = [product.name, product.title, product.brand, product.category, product.subcategory]
+    .filter(Boolean)
+    .join(' ')
+    .toLocaleLowerCase('el-GR');
+  return haystack.includes(title);
 }
 
 function sortProducts(products: Product[], payload: ProductSearchPayload) {
@@ -190,8 +192,10 @@ function sortProducts(products: Product[], payload: ProductSearchPayload) {
 function fallbackProductSearch(payload: ProductSearchPayload) {
   const requestedPage = Math.max(Number(payload.page || 1), 1);
   const pageSize = Math.max(Number(payload.page_size || 24), 1);
-  const exactMatches = fallbackProducts.filter((product) => productMatchesSearch(product, payload));
-  const filtered = sortProducts(exactMatches.length > 0 ? exactMatches : fallbackProducts, payload);
+  const filtered = sortProducts(
+    fallbackProducts.filter((product) => productMatchesSearch(product, payload)),
+    payload
+  );
   const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1);
   const page = filtered.length > 0 ? Math.min(requestedPage, totalPages) : 1;
   const start = (page - 1) * pageSize;
@@ -202,7 +206,6 @@ function fallbackProductSearch(payload: ProductSearchPayload) {
     total_pages: totalPages,
     page,
     page_size: pageSize,
-    fallback_relaxed: exactMatches.length === 0,
     fallback: true,
     fallback_generated_at: productsFallback.generated_at
   };
