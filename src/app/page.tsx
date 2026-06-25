@@ -7,7 +7,7 @@ import {
     Search, Moon, Sun, Heart, Trash2, Share2, Copy, Link as LinkIcon, 
     X, Sparkles, ShoppingBag, ChevronRight, ChevronDown, ChevronLeft, LayoutGrid,
     Store, Percent, Trophy, Info, PiggyBank, RefreshCw, Menu, ShoppingBasket,
-    MapPin, Home, Camera, Bell
+    MapPin, Home, Camera, Bell, ShieldCheck, Clock3
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -20,6 +20,20 @@ const proxyGovAssetUrl = (url?: string) => {
     return url.startsWith(GOV_API_ORIGIN) ? url.replace(GOV_API_ORIGIN, '/api') : url;
 };
 const retailerLogoUrl = (retailerId: string) => `/api/images/retailer/${retailerId}`;
+const formatGreekDate = (date?: string) => {
+    if (!date) return '';
+    return new Date(date).toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+};
+const formatProductUpdatedAt = (product: Product) => {
+    const dates = [
+        product.updated_at,
+        ...(product.retailer_prices || []).map((price) => price.last_updated)
+    ].filter(Boolean) as string[];
+
+    if (dates.length === 0) return '';
+    const latest = dates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
+    return formatGreekDate(latest);
+};
 
 // Allowed 6 supermarkets
 const ALLOWED_RETAILERS = ['lidl', 'masoutis', 'ab_vasilopoulos', 'mymarket', 'sklavenitis', 'kritikos'];
@@ -58,6 +72,7 @@ interface RetailerPrice {
     discount?: number;
     discount_percentage?: number;
     is_discount?: boolean;
+    last_updated?: string;
 }
 
 interface PriceStat {
@@ -79,6 +94,7 @@ interface Product {
     retailer_prices: RetailerPrice[];
     history?: { timestamp: string; retailer_prices: RetailerPrice[] }[];
     barcode?: string;
+    updated_at?: string;
 }
 
 interface CategoryNode {
@@ -101,6 +117,7 @@ interface RawProduct {
     retailer_prices?: RetailerPrice[] | null;
     history?: { timestamp: string; retailer_prices: RetailerPrice[] }[];
     barcode?: string;
+    updated_at?: string;
 }
 
 interface Stats {
@@ -248,6 +265,7 @@ export default function KallathakiApp() {
     const [totalProductsCount, setTotalProductsCount] = useState<number>(0);
     const [loadingProducts, setLoadingProducts] = useState(false);
     const [loadingCategories, setLoadingCategories] = useState(false);
+    const [productError, setProductError] = useState('');
 
     // Filter states
     const [searchTerm, setSearchTerm] = useState('');
@@ -433,6 +451,7 @@ export default function KallathakiApp() {
 
         const fetchProductsData = async () => {
             setLoadingProducts(true);
+            setProductError('');
             const payload: Record<string, unknown> = {
                 page: currentPage,
                 page_size: 24
@@ -466,9 +485,16 @@ export default function KallathakiApp() {
                     setProducts((data.products || []).map(sanitizeProduct));
                     setTotalPages(data.total_pages || 1);
                     setTotalProductsCount(data.total || 0);
+                } else {
+                    setProducts([]);
+                    setTotalProductsCount(0);
+                    setProductError('Δεν μπορέσαμε να φορτώσουμε τις τιμές αυτή τη στιγμή.');
                 }
             } catch (error) {
                 console.error("Failed to load products", error);
+                setProducts([]);
+                setTotalProductsCount(0);
+                setProductError('Υπήρξε προσωρινό πρόβλημα σύνδεσης. Δοκιμάστε ξανά σε λίγο.');
             } finally {
                 setLoadingProducts(false);
             }
@@ -571,6 +597,7 @@ export default function KallathakiApp() {
         setCategoryPath([]);
         setShowAllProductsInCategory(false);
         setCurrentPage(1);
+        setProductError('');
         setActiveTab('products');
         setIsSidebarOpen(false);
     };
@@ -1053,14 +1080,14 @@ export default function KallathakiApp() {
                         </div>
                     </div>
 
-                    <div className="p-4 border-t border-border-custom text-xs text-slate-400 space-y-1 bg-input-custom">
-                        <div className="flex items-center gap-1.5 font-medium">
-                            <Info className="w-3.5 h-3.5" />
-                            <span>Συνδέθηκε με το PosoKanei API</span>
+                    <div className="p-4 border-t border-border-custom text-xs text-slate-500 space-y-2 bg-input-custom">
+                        <div className="flex items-start gap-2 font-semibold text-slate-650 dark:text-slate-300">
+                            <ShieldCheck className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                            <span>Τιμές από επίσημα δεδομένα{stats ? ` — ενημέρωση ${formatGreekDate(stats.timestamp)}` : ''}</span>
                         </div>
-                        {stats && (
-                            <div>Ενημερώθηκε: {new Date(stats.timestamp).toLocaleDateString('el-GR')}</div>
-                        )}
+                        <p className="leading-relaxed">
+                            Τα δεδομένα προέρχονται από δημόσια διαθέσιμες πηγές τιμών.
+                        </p>
                     </div>
                 </aside>
 
@@ -1139,80 +1166,113 @@ export default function KallathakiApp() {
                     </header>
 
                     {/* Content Area */}
-                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6">
+                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6 transition-colors duration-300 scroll-smooth">
                         {activeTab === 'products' ? (
                             isHomeScreen ? (
                                 // BRAND-NEW HOMEPAGE DASHBOARD
-                                <div className="space-y-10 pb-12">
+                                <div className="space-y-14 pb-12">
                                     {/* Modern Hero Section */}
                                     <div className="relative bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 text-white rounded-3xl p-8 md:p-12 shadow-xl overflow-hidden">
-                                        <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none" />
-                                        <div className="absolute bottom-0 left-0 w-60 h-60 bg-emerald-500/10 rounded-full blur-2xl -ml-20 -mb-20 pointer-events-none" />
-                                        
+                                        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12)_0%,transparent_45%,rgba(16,185,129,0.16)_100%)] pointer-events-none" />
+
                                         <div className="relative z-10 max-w-2xl">
                                             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-white text-[11px] font-semibold mb-4">
-                                                <Sparkles className="w-3.5 h-3.5 text-white/80" />
-                                                <span>Έξυπνη Σύγκριση Τιμών</span>
+                                                <ShieldCheck className="w-3.5 h-3.5 text-white/80" />
+                                                <span>Τιμές από επίσημα δεδομένα{stats ? ` — ενημέρωση ${formatGreekDate(stats.timestamp)}` : ''}</span>
                                             </div>
                                             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-white via-emerald-100 to-amber-200 bg-clip-text text-transparent">
                                                 Συγκρίνετε Τιμές Σούπερ Μάρκετ & Εξοικονομήστε Χρήματα
                                             </h2>
                                             <p className="text-sm md:text-base text-white/90 max-w-lg mt-3 font-medium">
-                                                Συνδέεται απευθείας με την επίσημη βάση δεδομένων e-katanalotis. Βρείτε τις χαμηλότερες τιμές, φτιάξτε το καλάθι σας και βελτιστοποιήστε τα έξοδά σας με ένα κλικ.
+                                                Αναζητήστε προϊόντα, συγκρίνετε τιμές στις μεγαλύτερες αλυσίδες και φτιάξτε ένα καλάθι που κρατάει τα έξοδα υπό έλεγχο.
                                             </p>
                                             
                                             <div className="mt-6 flex flex-wrap gap-4">
-                                                <Link 
-                                                    href="/guide" 
+                                                <button
+                                                    onClick={() => {
+                                                        const input = document.querySelector<HTMLInputElement>('input[aria-label="Αναζήτηση προϊόντων"]');
+                                                        input?.focus();
+                                                    }}
                                                     className="inline-flex items-center gap-2 px-6 py-3.5 bg-white text-indigo-800 hover:bg-indigo-50 font-bold rounded-2xl shadow-md transition duration-250 cursor-pointer text-sm"
                                                 >
-                                                    <Sparkles className="w-4 h-4 text-indigo-800" />
-                                                    <span>{"\u03a0\u03ce\u03c2 \u039b\u03b5\u03b9\u03c4\u03bf\u03c5\u03c1\u03b3\u03b5\u03af (\u039f\u03b4\u03b7\u03b3\u03cc\u03c2 \u03a7\u03c1\u03ae\u03c3\u03b7\u03c2)"}</span>
-                                                </Link>
+                                                    <Search className="w-4 h-4 text-indigo-800" />
+                                                    <span>Ξεκινήστε Σύγκριση Τιμών</span>
+                                                </button>
                                                 <button 
                                                     onClick={() => setIsScannerOpen(true)}
                                                     className="inline-flex items-center gap-2 px-6 py-3.5 bg-indigo-600/20 border border-white/20 hover:bg-indigo-600/35 text-white font-bold rounded-2xl shadow-md transition duration-250 cursor-pointer text-sm"
                                                 >
                                                     <Camera className="w-4.5 h-4.5 text-indigo-250" />
-                                                    <span>{"\u03a3\u03ac\u03c1\u03c9\u03c3\u03b7 Barcode (Scan)"}</span>
+                                                    <span>Σάρωση Barcode</span>
                                                 </button>
+                                                <Link
+                                                    href="/guide"
+                                                    className="inline-flex items-center gap-2 px-5 py-3.5 text-white/90 hover:text-white font-bold rounded-2xl transition duration-250 cursor-pointer text-sm"
+                                                >
+                                                    <Sparkles className="w-4 h-4" />
+                                                    <span>Οδηγός χρήσης</span>
+                                                </Link>
                                             </div>
                                         </div>
                                     </div>
 
+                                    <section className="bg-card-bg border border-border-custom rounded-3xl p-5 sm:p-7 shadow-sm">
+                                        <div className="flex flex-col lg:flex-row lg:items-center gap-5">
+                                            <div className="lg:w-80">
+                                                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Αναζήτηση προϊόντων</span>
+                                                <h3 className="text-xl font-black text-slate-850 dark:text-slate-100 mt-1">Βρείτε γρήγορα την καλύτερη τιμή</h3>
+                                                <p className="text-sm text-slate-500 mt-2">Ξεκινήστε με ένα προϊόν ή επιλέξτε κατηγορία παρακάτω.</p>
+                                            </div>
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                                                <input
+                                                    type="text"
+                                                    value={searchTerm}
+                                                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                                    placeholder="π.χ. γάλα, φέτα, καφές, απορρυπαντικό"
+                                                    aria-label="Αναζήτηση προϊόντων από την αρχική"
+                                                    className="w-full pl-12 pr-4 py-4 text-base bg-input-custom border border-transparent focus:border-indigo-500 focus:bg-background rounded-2xl outline-none transition text-foreground shadow-inner"
+                                                />
+                                            </div>
+                                        </div>
+                                    </section>
+
                                     {/* Global Statistics Grid */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 px-1">
-                                            Στατιστικά Στοιχεία
-                                        </h3>
+                                    <div className="space-y-5">
+                                        <div className="px-1">
+                                            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                                                Γιατί αξίζει να συγκρίνετε
+                                            </h3>
+                                            <p className="text-sm text-slate-500 mt-1">Καθαρή εικόνα τιμών πριν πάτε στο ταμείο.</p>
+                                        </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                                             {[
                                                 {
-                                                    label: 'Προϊόντα στη Βάση',
+                                                    label: 'Περισσότερες επιλογές',
                                                     value: stats ? Number(stats.total_products).toLocaleString('el-GR') : '8.773',
-                                                    desc: 'Συνολικά καταχωρημένα προϊόντα',
+                                                    desc: 'Προϊόντα για σύγκριση τιμών',
                                                     icon: <ShoppingBag className="w-5 h-5 text-indigo-500" />,
                                                     bgColor: 'bg-indigo-500/10'
                                                 },
                                                 {
-                                                    label: 'Ενεργές Προσφορές',
+                                                    label: 'Ευκαιρίες σήμερα',
                                                     value: stats ? Number(stats.products_on_discount).toLocaleString('el-GR') : '2.263',
-                                                    desc: 'Προϊόντα με έκπτωση σήμερα',
+                                                    desc: 'Προϊόντα με ένδειξη προσφοράς',
                                                     icon: <Percent className="w-5 h-5 text-emerald-500" />,
                                                     bgColor: 'bg-emerald-500/10'
                                                 },
                                                 {
-                                                    label: 'Σούπερ Μάρκετ',
+                                                    label: 'Σύγκριση αλυσίδων',
                                                     value: `${ALLOWED_RETAILERS.length} αλυσίδες`,
-                                                    desc: 'Σύγκριση στις μεγαλύτερες αλυσίδες',
+                                                    desc: 'Οι βασικές επιλογές για καθημερινά ψώνια',
                                                     icon: <Store className="w-5 h-5 text-amber-500" />,
                                                     bgColor: 'bg-amber-500/10'
                                                 },
                                                 {
-                                                    label: 'Τελευταία Ενημέρωση',
-                                                    value: stats ? new Date(stats.timestamp).toLocaleDateString('el-GR') : 'Σήμερα',
-                                                    desc: 'Απευθείας από το e-katanalotis',
-                                                    icon: <RefreshCw className="w-5 h-5 text-violet-500" />,
+                                                    label: 'Πρόσφατες τιμές',
+                                                    value: stats ? formatGreekDate(stats.timestamp) : 'Σήμερα',
+                                                    desc: 'Τελευταία ενημέρωση δεδομένων',
+                                                    icon: <Clock3 className="w-5 h-5 text-violet-500" />,
                                                     bgColor: 'bg-violet-500/10'
                                                 }
                                             ].map((stat, idx) => (
@@ -1231,10 +1291,13 @@ export default function KallathakiApp() {
                                     </div>
 
                                     {/* Quick Category Navigation */}
-                                    <div className="space-y-4">
-                                        <h3 className="text-base font-bold text-slate-800 dark:text-slate-200 px-1">
-                                            Δημοφιλείς Κατηγορίες
-                                        </h3>
+                                    <div className="space-y-5">
+                                        <div className="px-1">
+                                            <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
+                                                Ανακαλύψτε ανά κατηγορία
+                                            </h3>
+                                            <p className="text-sm text-slate-500 mt-1">Μεγάλες κατηγορίες, καθαρή πλοήγηση, γρήγορη σύγκριση.</p>
+                                        </div>
                                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                                             {categories.map((cat) => {
                                                 const meta = CATEGORY_META[cat.category_id] || { emoji: '📦', gradient: 'from-slate-500/10 to-slate-600/10 text-slate-550' };
@@ -1243,15 +1306,20 @@ export default function KallathakiApp() {
                                                         key={cat.category_id}
                                                         onClick={() => handleCategoryClick(cat.category_id)}
                                                         className={`
-                                                            flex flex-col items-center text-center p-5 rounded-2xl border border-border-custom 
-                                                            bg-gradient-to-br ${meta.gradient} shadow-sm hover:shadow-md transition duration-300 cursor-pointer group
+                                                            min-h-36 flex flex-col items-start justify-between text-left p-5 rounded-2xl border border-border-custom 
+                                                            bg-gradient-to-br ${meta.gradient} shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition duration-300 cursor-pointer group
                                                         `}
                                                     >
-                                                        <span className="text-3xl mb-3 group-hover:scale-110 transition duration-300">{meta.emoji}</span>
-                                                        <span className="text-xs font-bold text-slate-850 dark:text-slate-100 block truncate w-full">{cat.name}</span>
-                                                        <span className="text-[10px] text-slate-450 dark:text-slate-400 font-semibold mt-1">
-                                                            {cat.total_product_count ? `${cat.total_product_count.toLocaleString('el-GR')} προϊόντα` : 'Δείτε όλα'}
-                                                        </span>
+                                                        <div className="w-full flex items-start justify-between gap-2">
+                                                            <span className="text-3xl group-hover:scale-110 transition duration-300">{meta.emoji}</span>
+                                                            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 transition" />
+                                                        </div>
+                                                        <div className="w-full">
+                                                            <span className="text-sm font-black text-slate-850 dark:text-slate-100 block leading-tight">{cat.name}</span>
+                                                            <span className="inline-flex mt-3 px-2.5 py-1 rounded-full bg-background/75 border border-border-custom text-[10px] text-slate-650 dark:text-slate-300 font-bold">
+                                                                {cat.total_product_count ? `${cat.total_product_count.toLocaleString('el-GR')} προϊόντα` : 'Δείτε όλα'}
+                                                            </span>
+                                                        </div>
                                                     </button>
                                                 );
                                             })}
@@ -1360,13 +1428,13 @@ export default function KallathakiApp() {
                                                             setShowAllProductsInCategory(false);
                                                             setCurrentPage(1);
                                                         }}
-                                                        className="group bg-card-bg border border-border-custom hover:border-indigo-500/50 p-5 rounded-2xl shadow-sm hover:shadow-md transition duration-300 cursor-pointer flex items-center justify-between"
+                                                        className="group bg-card-bg border border-border-custom hover:border-indigo-500/50 p-5 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition duration-300 cursor-pointer flex items-center justify-between"
                                                     >
                                                         <div className="min-w-0 pr-4">
                                                             <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-500 transition truncate">
                                                                 {sub.name}
                                                             </h4>
-                                                            <p className="text-xs text-slate-455 mt-1 font-medium">
+                                                            <p className="inline-flex mt-2 px-2.5 py-1 rounded-full bg-input-custom text-[10px] text-slate-650 dark:text-slate-300 font-bold">
                                                                 {sub.total_product_count || 0} προϊόντα
                                                             </p>
                                                         </div>
@@ -1375,23 +1443,47 @@ export default function KallathakiApp() {
                                                 ))}
                                             </div>
                                         </div>
+                                    ) : loadingProducts ? (
+                                        <div className="space-y-6">
+                                            <div className="flex items-center justify-between">
+                                                <div className="h-4 w-40 rounded-full bg-input-custom animate-pulse" />
+                                                <div className="h-4 w-24 rounded-full bg-input-custom animate-pulse" />
+                                            </div>
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+                                                {Array.from({ length: 8 }).map((_, idx) => (
+                                                    <div key={idx} className="bg-card-bg border border-border-custom rounded-2xl shadow-sm overflow-hidden">
+                                                        <div className="h-44 bg-input-custom animate-pulse" />
+                                                        <div className="p-4 space-y-3">
+                                                            <div className="h-3 w-20 rounded-full bg-input-custom animate-pulse" />
+                                                            <div className="h-4 w-full rounded-full bg-input-custom animate-pulse" />
+                                                            <div className="h-4 w-3/4 rounded-full bg-input-custom animate-pulse" />
+                                                            <div className="pt-3 border-t border-border-custom flex items-end justify-between">
+                                                                <div className="space-y-2">
+                                                                    <div className="h-3 w-10 rounded-full bg-input-custom animate-pulse" />
+                                                                    <div className="h-6 w-16 rounded-full bg-input-custom animate-pulse" />
+                                                                </div>
+                                                                <div className="h-4 w-12 rounded-full bg-input-custom animate-pulse" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
                                     ) : products.length === 0 ? (
                                         <div className="h-[40vh] flex flex-col items-center justify-center text-center max-w-sm mx-auto">
-                                            {loadingProducts ? (
-                                                <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
-                                            ) : (
-                                                <>
-                                                    <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center text-3xl mb-4">🔍</div>
-                                                    <h3 className="text-lg font-bold mb-1">Δεν βρέθηκαν προϊόντα</h3>
-                                                    <p className="text-sm text-slate-500 mb-4">Δοκιμάστε να αλλάξετε τα φίλτρα ή την αναζήτησή σας.</p>
-                                                    <button 
-                                                        onClick={resetFilters} 
-                                                        className="px-4 py-2 bg-indigo-500 text-white text-xs font-bold rounded-xl hover:bg-indigo-600 transition cursor-pointer"
-                                                    >
-                                                        Επαναφορά Φίλτρων
-                                                    </button>
-                                                </>
-                                            )}
+                                            <div className={`w-16 h-16 ${productError ? 'bg-amber-500/10 text-amber-600' : 'bg-indigo-500/10 text-indigo-600'} rounded-full flex items-center justify-center mb-4`}>
+                                                {productError ? <Info className="w-8 h-8" /> : <Search className="w-8 h-8" />}
+                                            </div>
+                                            <h3 className="text-lg font-bold mb-1">{productError ? 'Δεν φορτώθηκαν οι τιμές' : 'Δεν βρέθηκαν προϊόντα'}</h3>
+                                            <p className="text-sm text-slate-500 mb-4">
+                                                {productError || 'Δοκιμάστε άλλη λέξη αναζήτησης ή επιλέξτε διαφορετική κατηγορία.'}
+                                            </p>
+                                            <button 
+                                                onClick={resetFilters} 
+                                                className="px-5 py-3 bg-indigo-500 text-white text-xs font-bold rounded-xl hover:bg-indigo-600 transition cursor-pointer"
+                                            >
+                                                Επιστροφή στην αρχική
+                                            </button>
                                         </div>
                                     ) : (
                                         <div className="space-y-6">
@@ -1399,24 +1491,20 @@ export default function KallathakiApp() {
                                                 <span>Βρέθηκαν {totalProductsCount} προϊόντα</span>
                                             </div>
 
-                                            {loadingProducts ? (
-                                                <div className="h-60 flex items-center justify-center">
-                                                    <RefreshCw className="w-8 h-8 animate-spin text-amber-500" />
-                                                </div>
-                                            ) : (
-                                                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
                                                     {products.map(prod => {
                                                         const isFav = favorites.some(p => p.id === prod.id);
                                                         const cheapest = getCheapestRetailer(prod);
+                                                        const productUpdatedAt = formatProductUpdatedAt(prod);
                                                         return (
                                                             <div 
                                                                 key={prod.id} 
                                                                 onClick={() => showProductDetails(prod)}
                                                                 className="group relative bg-card-bg border border-border-custom hover:border-indigo-500/50 rounded-2xl shadow-sm hover:shadow-md transition duration-300 overflow-hidden cursor-pointer flex flex-col"
                                                             >
-                                                                {cheapest?.is_discount && cheapest.discount_percentage && (
-                                                                    <div className="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full z-10">
-                                                                        -{cheapest.discount_percentage}%
+                                                                {cheapest?.is_discount && (
+                                                                    <div className="absolute top-3 left-3 bg-emerald-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full z-10 shadow-md">
+                                                                        {cheapest.discount_percentage ? `-${cheapest.discount_percentage}%` : 'Προσφορά'}
                                                                     </div>
                                                                 )}
 
@@ -1464,12 +1552,17 @@ export default function KallathakiApp() {
                                                                             />
                                                                         ))}
                                                                     </div>
+                                                                    {productUpdatedAt && (
+                                                                        <div className="mt-3 flex items-center gap-1 text-[10px] text-slate-450 font-semibold">
+                                                                            <Clock3 className="w-3 h-3" />
+                                                                            <span>Ενημέρωση {productUpdatedAt}</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         );
                                                     })}
-                                                </div>
-                                            )}
+                                            </div>
 
                                             {/* Pagination */}
                                             <div className="pt-8 flex items-center justify-between border-t border-border-custom">
@@ -1824,7 +1917,7 @@ export default function KallathakiApp() {
                                                                                 title="Κάντε κλικ για προβολή στο χάρτη"
                                                                             >
                                                                                 <div className="flex items-center gap-3">
-                                                                                    <img className="w-9 h-9 rounded-full object-cover border border-border-custom" src={`https://api.posokanei.gov.gr/images/retailer/${res.retailerId}`} alt="" />
+                                                                                    <img className="w-9 h-9 rounded-full object-cover border border-border-custom" src={retailerLogoUrl(res.retailerId)} alt="" />
                                                                                     <div>
                                                                                         <div className="text-xs font-bold flex items-center gap-1">
                                                                                             <span>{meta.name}</span>
@@ -1883,7 +1976,7 @@ export default function KallathakiApp() {
                                                                         <div key={group.retailerId} className="border border-border-custom rounded-xl overflow-hidden">
                                                                             <div className="p-3 bg-input-custom flex items-center justify-between border-b border-border-custom">
                                                                                 <div className="flex items-center gap-2">
-                                                                                    <img className="w-5 h-5 rounded-full object-cover" src={`https://api.posokanei.gov.gr/images/retailer/${group.retailerId}`} alt="" />
+                                                                                    <img className="w-5 h-5 rounded-full object-cover" src={retailerLogoUrl(group.retailerId)} alt="" />
                                                                                     <span className="text-xs font-bold">{meta.name}</span>
                                                                                     <button 
                                                                                         onClick={() => setActiveMapRetailer(group.retailerId)}
@@ -1978,12 +2071,17 @@ export default function KallathakiApp() {
                                             return (
                                                 <div key={rp.retailer} className="flex justify-between items-center p-3 bg-input-custom rounded-xl border border-transparent">
                                                     <div className="flex items-center gap-2">
-                                                        <img className="w-6 h-6 rounded-full object-cover" src={`https://api.posokanei.gov.gr/images/retailer/${rp.retailer}`} alt="" />
-                                                        <span className="text-xs font-bold">{meta.name}</span>
+                                                        <img className="w-6 h-6 rounded-full object-cover" src={retailerLogoUrl(rp.retailer)} alt="" />
+                                                        <div>
+                                                            <span className="text-xs font-bold block">{meta.name}</span>
+                                                            {rp.last_updated && (
+                                                                <span className="text-[10px] text-slate-450 font-semibold">Ενημέρωση {formatGreekDate(rp.last_updated)}</span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <div className="flex items-center gap-2">
-                                                        {rp.is_discount && rp.discount_percentage && (
-                                                            <span className="text-[9px] font-black text-white bg-emerald-500 px-1.5 py-0.5 rounded">-{rp.discount_percentage}%</span>
+                                                        {rp.is_discount && (
+                                                            <span className="text-[9px] font-black text-white bg-emerald-500 px-1.5 py-0.5 rounded">{rp.discount_percentage ? `-${rp.discount_percentage}%` : 'Προσφορά'}</span>
                                                         )}
                                                         <strong className="text-xs font-extrabold text-slate-800 dark:text-slate-100">€{rp.price.toFixed(2)}</strong>
                                                     </div>
@@ -2122,14 +2220,14 @@ export default function KallathakiApp() {
                 </div>
 
                 {/* Mobile Bottom Navigation Bar */}
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-35 bg-sidebar-bg border-t border-border-custom px-6 py-2 flex items-center justify-around shadow-lg">
+                <nav className="md:hidden fixed bottom-0 left-0 right-0 z-35 bg-sidebar-bg/95 backdrop-blur border-t border-border-custom px-3 pt-2 pb-[calc(0.6rem+env(safe-area-inset-bottom))] grid grid-cols-4 shadow-[0_-10px_30px_rgba(15,23,42,0.08)]">
                     <button 
                         onClick={() => {
                             setActiveTab('products');
                             resetFilters();
                         }}
-                        className={`flex flex-col items-center gap-1 transition ${
-                            activeTab === 'products' ? 'text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
+                        className={`min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl transition active:scale-95 ${
+                            activeTab === 'products' ? 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
                         }`}
                     >
                         <Home className="w-5 h-5" />
@@ -2137,28 +2235,28 @@ export default function KallathakiApp() {
                     </button>
                     <button 
                         onClick={() => setIsSidebarOpen(true)}
-                        className="flex flex-col items-center gap-1 text-slate-650 dark:text-slate-400 hover:text-foreground transition"
+                        className="min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl text-slate-650 dark:text-slate-400 hover:text-foreground transition active:scale-95"
                     >
                         <Menu className="w-5 h-5" />
                         <span className="text-[10px]">Κατηγορίες</span>
                     </button>
                     <button 
                         onClick={() => setIsScannerOpen(true)}
-                        className="flex flex-col items-center gap-1 text-slate-650 dark:text-slate-400 hover:text-indigo-800 dark:hover:text-indigo-400 transition"
+                        className="min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl text-slate-650 dark:text-slate-400 hover:text-indigo-800 dark:hover:text-indigo-400 transition active:scale-95"
                     >
                         <Camera className="w-5 h-5" />
                         <span className="text-[10px]">Σάρωση</span>
                     </button>
                     <button 
                         onClick={() => setActiveTab('favorites')}
-                        className={`flex flex-col items-center gap-1 transition relative ${
-                            activeTab === 'favorites' ? 'text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
+                        className={`min-h-14 flex flex-col items-center justify-center gap-1 rounded-2xl transition relative active:scale-95 ${
+                            activeTab === 'favorites' ? 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 font-bold' : 'text-slate-650 dark:text-slate-400 hover:text-foreground'
                         }`}
                     >
                         <ShoppingBasket className="w-5 h-5" />
                         <span className="text-[10px]">Καλάθι</span>
                         {activeBasketIds.length > 0 && (
-                            <span className="absolute -top-1 -right-2 bg-emerald-500 text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                            <span className="absolute top-1 right-3 bg-emerald-500 text-white text-[10px] font-black rounded-full min-w-5 h-5 px-1 flex items-center justify-center shadow-md ring-2 ring-sidebar-bg">
                                 {activeBasketIds.length}
                             </span>
                         )}
