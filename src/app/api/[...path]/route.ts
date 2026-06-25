@@ -188,20 +188,21 @@ function sortProducts(products: Product[], payload: ProductSearchPayload) {
 }
 
 function fallbackProductSearch(payload: ProductSearchPayload) {
-  const page = Math.max(Number(payload.page || 1), 1);
+  const requestedPage = Math.max(Number(payload.page || 1), 1);
   const pageSize = Math.max(Number(payload.page_size || 24), 1);
-  const filtered = sortProducts(
-    fallbackProducts.filter((product) => productMatchesSearch(product, payload)),
-    payload
-  );
+  const exactMatches = fallbackProducts.filter((product) => productMatchesSearch(product, payload));
+  const filtered = sortProducts(exactMatches.length > 0 ? exactMatches : fallbackProducts, payload);
+  const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1);
+  const page = filtered.length > 0 ? Math.min(requestedPage, totalPages) : 1;
   const start = (page - 1) * pageSize;
 
   return {
     products: filtered.slice(start, start + pageSize),
     total: filtered.length,
-    total_pages: Math.max(Math.ceil(filtered.length / pageSize), 1),
+    total_pages: totalPages,
     page,
     page_size: pageSize,
+    fallback_relaxed: exactMatches.length === 0,
     fallback: true,
     fallback_generated_at: productsFallback.generated_at
   };
