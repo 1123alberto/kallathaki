@@ -175,6 +175,7 @@ export default function KallathakiApp() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [products, setProducts] = useState<Product[]>([]);
     const [favorites, setFavorites] = useState<Product[]>([]);
+    const [isRefreshingSavedProducts, setIsRefreshingSavedProducts] = useState(false);
     const [activeBasketIds, setActiveBasketIds] = useState<string[]>([]);
     const [favoritesSubTab, setFavoritesSubTab] = useState<'pantry' | 'basket'>('pantry');
     const [isScannerOpen, setIsScannerOpen] = useState(false);
@@ -182,6 +183,7 @@ export default function KallathakiApp() {
     const [isHelperOpen, setIsHelperOpen] = useState(false);
     const [helperRetailer, setHelperRetailer] = useState<string>('');
     const [showOptimizerResults, setShowOptimizerResults] = useState(false);
+    const didRefreshSavedProducts = useRef(false);
 
     const activeBasketProducts = useMemo(() => {
         return favorites.filter(p => activeBasketIds.includes(p.id));
@@ -313,6 +315,62 @@ export default function KallathakiApp() {
             console.error('Failed to update push basket:', error);
         });
     }, [isSubscribed, mounted, pushSupported, syncPushBasket]);
+
+    const refreshSavedProducts = useCallback(async (productsToRefresh = favorites) => {
+        if (productsToRefresh.length === 0 || isRefreshingSavedProducts) return;
+
+        setIsRefreshingSavedProducts(true);
+        try {
+            const refreshedProducts = new Map<string, Product>();
+            const chunkSize = 6;
+
+            for (let i = 0; i < productsToRefresh.length; i += chunkSize) {
+                const chunk = productsToRefresh.slice(i, i + chunkSize);
+                const results = await Promise.allSettled(chunk.map(async (product) => {
+                    const response = await fetch(`/api/products/${product.id}?countries=GR%2CEU&include_tax=true&_refresh=1`, {
+                        cache: 'no-store',
+                        headers: {
+                            'Cache-Control': 'no-cache',
+                            'x-kallathaki-refresh': '1'
+                        }
+                    });
+
+                    if (!response.ok) throw new Error(`Failed to refresh product ${product.id}: ${response.status}`);
+                    const data = await response.json();
+                    if (!data) return null;
+
+                    return sanitizeProduct(data);
+                }));
+
+                results.forEach((result) => {
+                    if (result.status === 'fulfilled' && result.value) {
+                        refreshedProducts.set(result.value.id, result.value);
+                    }
+                });
+            }
+
+            if (refreshedProducts.size === 0) return;
+
+            setFavorites((prev) => {
+                const updated = prev.map((product) => refreshedProducts.get(product.id) || product);
+                localStorage.setItem('posokanei_favorites', JSON.stringify(updated));
+                return updated;
+            });
+
+            setProducts((prev) => prev.map((product) => refreshedProducts.get(product.id) || product));
+            setSelectedProduct((prev) => prev ? (refreshedProducts.get(prev.id) || prev) : prev);
+        } catch (error) {
+            console.error('Failed to refresh saved products', error);
+        } finally {
+            setIsRefreshingSavedProducts(false);
+        }
+    }, [favorites, isRefreshingSavedProducts]);
+
+    useEffect(() => {
+        if (!mounted || didRefreshSavedProducts.current || favorites.length === 0) return;
+        didRefreshSavedProducts.current = true;
+        refreshSavedProducts(favorites);
+    }, [favorites, mounted, refreshSavedProducts]);
 
     const [totalProductsCount, setTotalProductsCount] = useState<number>(0);
     const [loadingProducts, setLoadingProducts] = useState(false);

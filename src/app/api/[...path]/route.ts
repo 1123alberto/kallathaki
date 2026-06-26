@@ -1,36 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import categoriesFallback from './categories-fallback.json';
-import productsFallback from './products-fallback.json';
 import statsFallback from './stats-fallback.json';
 
 const GOV_API_URL = process.env.GOV_API_URL || 'https://api.posokanei.gov.gr';
 
 type CacheEntry = { data: unknown; timestamp: number };
-type Product = {
-  id?: string;
-  name?: string;
-  title?: string;
-  brand?: string;
-  barcode?: string;
-  category?: string;
-  category_ids?: string[];
-  subcategory?: string;
-  retailer_prices?: Array<{ is_discount?: boolean; discount_percentage?: number | null }>;
-  price_stats?: { min_price?: number; avg_price?: number };
-  updated_at?: string;
-};
-type ProductSearchPayload = {
-  page?: number;
-  page_size?: number;
-  title?: string;
-  category_id?: string;
-  sort_by?: string;
-  sort_order?: string;
-};
 
 const apiCache = new Map<string, CacheEntry>();
 const CACHE_TTL_BY_PATH: Array<[RegExp, number]> = [
-  [/^products\//, 10 * 60 * 1000],
+  [/^products\//, 60 * 1000],
   [/^meta\/categories/, 6 * 60 * 60 * 1000],
   [/^offers/, 10 * 60 * 1000],
   [/^meta\/stats$/, 15 * 60 * 1000]
@@ -38,7 +16,6 @@ const CACHE_TTL_BY_PATH: Array<[RegExp, number]> = [
 const DEFAULT_CACHE_TTL = 15 * 60 * 1000;
 const STALE_CACHE_TTL = 24 * 60 * 60 * 1000;
 const UPSTREAM_TIMEOUT_MS = 12_000;
-const fallbackProducts = (productsFallback.products || []) as Product[];
 
 function cacheTtlForPath(targetPath: string) {
   return CACHE_TTL_BY_PATH.find(([pattern]) => pattern.test(targetPath))?.[1] || DEFAULT_CACHE_TTL;
@@ -60,8 +37,27 @@ function cacheResponse(cacheKey: string, data: unknown) {
   apiCache.set(cacheKey, { data, timestamp: Date.now() });
 }
 
+function canUseStaleCache(targetPath: string) {
+  return !/^products(\/|$)/.test(targetPath) && !targetPath.startsWith('offers');
+}
+
+function shouldBypassCache(req: NextRequest) {
+  return (
+    req.headers.get('x-kallathaki-refresh') === '1' ||
+    req.headers.get('cache-control')?.includes('no-cache') ||
+    req.nextUrl.searchParams.get('_refresh') === '1'
+  );
+}
+
+function upstreamSearchParams(req: NextRequest) {
+  const searchParams = new URLSearchParams(req.nextUrl.searchParams);
+  searchParams.delete('_refresh');
+  return searchParams.toString();
+}
+
 function jsonWithSource(data: unknown, init?: ResponseInit, source?: string) {
   const response = NextResponse.json(data, init);
+  response.headers.set('Cache-Control', 'no-store, max-age=0');
   if (source) response.headers.set('x-kallathaki-data-source', source);
   return response;
 }
@@ -153,98 +149,9 @@ async function fetchUpstream(url: string, init: RequestInit, targetPath: string)
   }
 }
 
-function productMatchesSearch(product: Product, payload: ProductSearchPayload) {
-  const title = payload.title?.trim().toLocaleLowerCase('el-GR');
-  const categoryId = payload.category_id?.trim();
-
-  if (categoryId && !(product.category_ids || []).includes(categoryId)) {
-    return false;
-  }
-
-  if (title && !productMatchesTitle(product, title)) return false;
-
-  return true;
-}
-
-function productMatchesTitle(product: Product, title: string) {
-  const haystack = [product.name, product.title, product.brand, product.category, product.subcategory]
-    .filter(Boolean)
-    .join(' ')
-    .toLocaleLowerCase('el-GR');
-  return haystack.includes(title);
-}
-
-function sortProducts(products: Product[], payload: ProductSearchPayload) {
-  const sorted = [...products];
-  const direction = payload.sort_order === 'desc' ? -1 : 1;
-
-  if (payload.sort_by === 'unit_price') {
-    sorted.sort((a, b) => {
-      const aPrice = a.price_stats?.min_price ?? a.price_stats?.avg_price ?? Number.MAX_SAFE_INTEGER;
-      const bPrice = b.price_stats?.min_price ?? b.price_stats?.avg_price ?? Number.MAX_SAFE_INTEGER;
-      return (aPrice - bPrice) * direction;
-    });
-  }
-
-  return sorted;
-}
-
-function fallbackProductSearch(payload: ProductSearchPayload) {
-  const requestedPage = Math.max(Number(payload.page || 1), 1);
-  const pageSize = Math.max(Number(payload.page_size || 24), 1);
-  const filtered = sortProducts(
-    fallbackProducts.filter((product) => productMatchesSearch(product, payload)),
-    payload
-  );
-  const totalPages = Math.max(Math.ceil(filtered.length / pageSize), 1);
-  const page = filtered.length > 0 ? Math.min(requestedPage, totalPages) : 1;
-  const start = (page - 1) * pageSize;
-
-  return {
-    products: filtered.slice(start, start + pageSize),
-    total: filtered.length,
-    total_pages: totalPages,
-    page,
-    page_size: pageSize,
-    fallback: true,
-    fallback_generated_at: productsFallback.generated_at
-  };
-}
-
-function fallbackProductById(id: string) {
-  return fallbackProducts.find((product) => product.id === id);
-}
-
-function fallbackProductByBarcode(barcode: string) {
-  return fallbackProducts.find((product) => product.barcode === barcode);
-}
-
-function fallbackOffers() {
-  const products = fallbackProducts.filter((product) =>
-    (product.retailer_prices || []).some((price) => price.is_discount || Number(price.discount_percentage || 0) > 0)
-  );
-
-  return {
-    products,
-    total: products.length,
-    total_pages: 1,
-    page: 1,
-    page_size: products.length,
-    fallback: true,
-    fallback_generated_at: productsFallback.generated_at
-  };
-}
-
 function staticFallbackForGet(targetPath: string) {
   if (targetPath === 'meta/categories/tree') return categoriesFallback;
   if (targetPath === 'meta/stats') return statsFallback;
-  if (targetPath.startsWith('offers')) return fallbackOffers();
-
-  const productMatch = targetPath.match(/^products\/([^/]+)$/);
-  if (productMatch) return fallbackProductById(productMatch[1]);
-
-  const barcodeMatch = targetPath.match(/^products\/barcode\/([^/]+)$/);
-  if (barcodeMatch) return fallbackProductByBarcode(barcodeMatch[1]);
 
   return null;
 }
@@ -254,7 +161,7 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path } = await params;
-  const searchParams = req.nextUrl.searchParams.toString();
+  const searchParams = upstreamSearchParams(req);
   const targetPath = path.join('/');
   const url = `${GOV_API_URL}/${targetPath}${searchParams ? `?${searchParams}` : ''}`;
   if (targetPath.startsWith('images/')) {
@@ -263,7 +170,8 @@ export async function GET(
 
   const cacheKey = `GET:${url}`;
   const ttl = cacheTtlForPath(targetPath);
-  const cached = getCache(cacheKey, ttl);
+  const bypassCache = shouldBypassCache(req);
+  const cached = bypassCache ? null : getCache(cacheKey, ttl);
 
   if (cached?.isFresh) {
     return jsonWithSource(cached.data, undefined, 'cache');
@@ -275,7 +183,7 @@ export async function GET(
     return jsonWithSource(upstream.data, undefined, 'upstream');
   }
 
-  if (cached?.isStaleUsable) {
+  if (cached?.isStaleUsable && canUseStaleCache(targetPath)) {
     console.warn('[Gov API stale GET fallback]', { targetPath, status: upstream.status });
     return jsonWithSource(cached.data, undefined, 'stale-cache');
   }
@@ -303,7 +211,8 @@ export async function POST(
   const body = await req.json();
   const cacheKey = `POST:${url}:${JSON.stringify(body)}`;
   const ttl = cacheTtlForPath(targetPath);
-  const cached = getCache(cacheKey, ttl);
+  const bypassCache = shouldBypassCache(req);
+  const cached = bypassCache ? null : getCache(cacheKey, ttl);
 
   if (cached?.isFresh) {
     return jsonWithSource(cached.data, undefined, 'cache');
@@ -324,20 +233,13 @@ export async function POST(
     return jsonWithSource(upstream.data, undefined, 'upstream');
   }
 
-  if (cached?.isStaleUsable) {
+  if (cached?.isStaleUsable && canUseStaleCache(targetPath)) {
     console.warn('[Gov API stale POST fallback]', { targetPath, status: upstream.status });
     return jsonWithSource(cached.data, undefined, 'stale-cache');
   }
 
   if (targetPath === 'products/search') {
-    const fallback = fallbackProductSearch(body as ProductSearchPayload);
-    console.warn('[Gov API static products/search fallback]', {
-      targetPath,
-      status: upstream.status,
-      fallbackCount: fallback.products.length,
-      fallbackTotal: fallback.total
-    });
-    return jsonWithSource(fallback, undefined, 'static-fallback');
+    console.warn('[Gov API products/search unavailable]', { targetPath, status: upstream.status });
   }
 
   return jsonWithSource(
