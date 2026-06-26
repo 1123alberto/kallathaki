@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Bell, ShoppingBag, ShoppingBasket, Trash2, Share2, Store, Info, Trophy, PiggyBank, MapPin } from 'lucide-react';
+import { Heart, Bell, ShoppingBag, ShoppingBasket, Trash2, Share2, Store, Info, Trophy, PiggyBank, MapPin, RefreshCw } from 'lucide-react';
 
 interface PriceStat {
     min_price: number;
@@ -142,9 +142,17 @@ const BASKET_COPY = {
         estimate: 'Εκτίμηση',
         maxBenefit: 'Μέγιστο όφελος',
         optimizeBasket: 'Βελτιστοποίηση Καλαθιού',
+        optimizingSteps: ['Εύρεση τιμών...', 'Έλεγχος προσφορών...', 'Σύγκριση σούπερ μάρκετ...', 'Δημιουργία φθηνότερου καλαθιού...', 'Σχεδόν έτοιμο...'],
+        noOptimizationTitle: 'Δεν μπορέσαμε να συγκρίνουμε αρκετές τιμές σήμερα',
+        noOptimizationText: 'Δοκιμάστε να προσθέσετε περισσότερα προϊόντα ή να ελέγξετε ξανά αργότερα.',
         missingPrices: (count: number) => `Δεν υπάρχουν αρκετά δεδομένα τιμών για ${count} προϊόντα. Η σύγκριση γίνεται με όσα προϊόντα έχουν διαθέσιμες τιμές.`,
         result: 'Αποτέλεσμα',
         saveUpTo: (amount: string) => `Μπορείτε να εξοικονομήσετε έως €${amount}`,
+        recommendationLead: 'Προτείνουμε αυτή την επιλογή',
+        recommendedOneStoreReason: (extra: string) => `γιατί μπορείτε να πάρετε τα πάντα από ένα κατάστημα${extra}.`,
+        recommendedTwoStoreReason: (saving: string) => `γιατί εξοικονομείτε €${saving} χωρίς περιττές στάσεις.`,
+        recommendedThreeStoreReason: (saving: string) => `γιατί η επιπλέον στάση αξίζει για εξοικονόμηση €${saving}.`,
+        recommendedFallbackReason: 'γιατί δίνει την καλύτερη διαθέσιμη εικόνα για το τρέχον καλάθι.',
         oneStoreResult: 'Για λίγα ευρώ παραπάνω, μπορείτε να τα πάρετε όλα από ένα κατάστημα.',
         balancedResult: 'Η προτεινόμενη λύση κρατά καλή ισορροπία ανάμεσα στην οικονομία και την ευκολία.',
         mostConvenient: 'Πιο βολικό',
@@ -158,6 +166,8 @@ const BASKET_COPY = {
         byStoreTitle: 'Τι να αγοράσετε από κάθε σούπερ μάρκετ',
         byStoreText: 'Ανάλυση για την προτεινόμενη επιλογή.',
         missingRecommended: (count: number) => `Δεν υπάρχουν τιμές για ${count} προϊόντα στην προτεινόμενη επιλογή.`,
+        subtotal: 'Υποσύνολο',
+        checklist: 'Λίστα προϊόντων',
         activeProductsTitle: 'Προϊόντα στο Ενεργό Καλάθι',
         activeProductsText: 'Ενεργά προϊόντα που συμμετέχουν στη βελτιστοποίηση. Ξεκλικάρετε για να τα εξαιρέσετε προσωρινά.',
         basketPriceComparison: 'Σύγκριση Τιμών Καλαθιού ανά Σούπερ Μάρκετ',
@@ -208,9 +218,17 @@ const BASKET_COPY = {
         estimate: 'Estimate',
         maxBenefit: 'Maximum Savings',
         optimizeBasket: 'Optimize Basket',
+        optimizingSteps: ['Finding prices...', 'Checking offers...', 'Comparing supermarkets...', 'Building your cheapest basket...', 'Almost done...'],
+        noOptimizationTitle: 'We couldn’t compare enough prices today',
+        noOptimizationText: 'Try adding more products or check again later.',
         missingPrices: (count: number) => `We do not have enough price data for ${count} ${count === 1 ? 'product' : 'products'}. The comparison uses the products with available prices.`,
         result: 'Result',
         saveUpTo: (amount: string) => `You could save up to €${amount}`,
+        recommendationLead: 'We recommend this option',
+        recommendedOneStoreReason: (extra: string) => `because you can get everything from one store${extra}.`,
+        recommendedTwoStoreReason: (saving: string) => `because you save €${saving} without unnecessary stops.`,
+        recommendedThreeStoreReason: (saving: string) => `because the extra stop is worth €${saving} in savings.`,
+        recommendedFallbackReason: 'because it gives you the clearest available plan for this basket.',
         oneStoreResult: 'For a little more, you can get everything from one store.',
         balancedResult: 'Recommended gives you a good balance of savings and convenience.',
         mostConvenient: 'Most Convenient',
@@ -224,6 +242,8 @@ const BASKET_COPY = {
         byStoreTitle: 'What to buy from each supermarket',
         byStoreText: 'Breakdown for the recommended option.',
         missingRecommended: (count: number) => `Prices are missing for ${count} ${count === 1 ? 'product' : 'products'} in the recommended option.`,
+        subtotal: 'Subtotal',
+        checklist: 'Checklist',
         activeProductsTitle: 'Products in Active Basket',
         activeProductsText: 'These products are included in basket optimization. Untick any item to leave it out for now.',
         basketPriceComparison: 'Basket Price Comparison by Supermarket',
@@ -296,6 +316,59 @@ export default function FavoritesView({
     const stopCountLabel = (count: number) => language === 'en'
         ? `${count} ${count === 1 ? 'stop' : 'stops'}`
         : `${count} ${count === 1 ? 'στάση' : 'στάσεις'}`;
+    const [isOptimizing, setIsOptimizing] = React.useState(false);
+    const [optimizerStep, setOptimizerStep] = React.useState(0);
+    const optimizerTimeoutsRef = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+
+    React.useEffect(() => {
+        return () => {
+            optimizerTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+        };
+    }, []);
+
+    const baselineForProduct = (productId: string) => {
+        const product = activeBasketProducts.find((item) => item.id === productId);
+        if (!product || product.retailer_prices.length === 0) return 0;
+        return Math.max(...product.retailer_prices.map((price) => price.price));
+    };
+
+    const optionSavings = (totalCost?: number) => Math.max(0, basketOptimizer.baselineCost - (totalCost || 0));
+    const convenientExtraCost = Math.max(0, (basketOptimizer.convenient?.totalCost || 0) - (basketOptimizer.recommended?.totalCost || 0));
+    const recommendedSaving = optionSavings(basketOptimizer.recommended?.totalCost);
+    const recommendationReason = (() => {
+        const recommended = basketOptimizer.recommended;
+        if (!recommended) return copy.recommendedFallbackReason;
+        if (recommended.stops === 1) {
+            const extra = convenientExtraCost > 0
+                ? (language === 'en' ? ` for €${convenientExtraCost.toFixed(2)} more` : ` με €${convenientExtraCost.toFixed(2)} παραπάνω`)
+                : '';
+            return copy.recommendedOneStoreReason(extra);
+        }
+        if (recommended.stops === 2) return copy.recommendedTwoStoreReason(recommendedSaving.toFixed(2));
+        if (recommended.stops === 3) return copy.recommendedThreeStoreReason(recommendedSaving.toFixed(2));
+        return copy.recommendedFallbackReason;
+    })();
+
+    const startOptimization = () => {
+        optimizerTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
+        optimizerTimeoutsRef.current = [];
+        setShowOptimizerResults(false);
+        setIsOptimizing(true);
+        setOptimizerStep(0);
+
+        copy.optimizingSteps.forEach((_, index) => {
+            const timeout = setTimeout(() => {
+                setOptimizerStep(index);
+            }, index * 450);
+            optimizerTimeoutsRef.current.push(timeout);
+        });
+
+        const finishTimeout = setTimeout(() => {
+            setIsOptimizing(false);
+            setShowOptimizerResults(true);
+        }, copy.optimizingSteps.length * 450 + 250);
+        optimizerTimeoutsRef.current.push(finishTimeout);
+    };
 
     return (
         <div className="space-y-8">
@@ -492,10 +565,11 @@ export default function FavoritesView({
                                                 <strong className="block text-xl font-black text-emerald-200 mt-1">€{basketOptimizer.bestPossibleSaving.toFixed(2)}</strong>
                                             </div>
                                             <button
-                                                onClick={() => setShowOptimizerResults(true)}
+                                                onClick={startOptimization}
+                                                disabled={isOptimizing}
                                                 className="col-span-2 sm:col-span-1 min-h-16 px-5 py-3 bg-white text-indigo-800 hover:bg-indigo-50 rounded-2xl font-black text-sm shadow-lg transition active:scale-[0.98]"
                                             >
-                                                {copy.optimizeBasket}
+                                                {isOptimizing ? copy.optimizingSteps[optimizerStep] : copy.optimizeBasket}
                                             </button>
                                         </div>
                                     </div>
@@ -507,6 +581,33 @@ export default function FavoritesView({
                                     )}
                                 </section>
 
+                                {isOptimizing && (
+                                    <section className="bg-card-bg border border-border-custom rounded-3xl p-5 shadow-sm">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                                                <RefreshCw className="w-4 h-4 text-emerald-500 animate-spin" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="text-sm font-black text-slate-850 dark:text-slate-100">{copy.optimizingSteps[optimizerStep]}</div>
+                                                <div className="mt-3 h-2 rounded-full bg-input-custom overflow-hidden">
+                                                    <div
+                                                        className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                                                        style={{ width: `${((optimizerStep + 1) / copy.optimizingSteps.length) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                )}
+
+                                {showOptimizerResults && !basketOptimizer.hasEnoughData && (
+                                    <section className="bg-card-bg border border-amber-500/20 rounded-3xl p-6 shadow-sm text-center">
+                                        <Info className="w-10 h-10 text-amber-500 mx-auto mb-3" />
+                                        <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">{copy.noOptimizationTitle}</h3>
+                                        <p className="text-sm text-slate-500 mt-2 max-w-md mx-auto">{copy.noOptimizationText}</p>
+                                    </section>
+                                )}
+
                                 {showOptimizerResults && basketOptimizer.hasEnoughData && (
                                     <section className="space-y-5">
                                         <div className="bg-card-bg border border-emerald-500/20 rounded-3xl p-6 shadow-sm">
@@ -514,10 +615,8 @@ export default function FavoritesView({
                                             <h3 className="text-2xl font-black text-slate-850 dark:text-slate-100 mt-1">
                                                 {copy.saveUpTo(basketOptimizer.bestPossibleSaving.toFixed(2))}
                                             </h3>
-                                            <p className="text-sm text-slate-500 mt-2">
-                                                {basketOptimizer.recommended?.stops === 1
-                                                    ? copy.oneStoreResult
-                                                    : copy.balancedResult}
+                                            <p className="text-sm text-slate-500 mt-2 max-w-2xl">
+                                                <span className="font-bold text-emerald-600 dark:text-emerald-400">{copy.recommendationLead}</span> {recommendationReason}
                                             </p>
                                         </div>
 
@@ -604,28 +703,56 @@ export default function FavoritesView({
                                                     <span className="text-xs font-black text-emerald-600 dark:text-emerald-400">€{basketOptimizer.recommended.totalCost.toFixed(2)}</span>
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                                                    {basketOptimizer.recommended.groups.map((group) => (
-                                                        <details key={group.retailerId} className="group bg-input-custom rounded-2xl border border-border-custom overflow-hidden" open>
-                                                            <summary className="list-none cursor-pointer p-4 flex items-center justify-between gap-3">
-                                                                <div className="flex items-center gap-3 min-w-0">
-                                                                    <img src={retailerLogoUrl(group.retailerId)} alt="" className="w-8 h-8 rounded-full object-cover" />
-                                                                    <div className="min-w-0">
-                                                                        <div className="text-sm font-black truncate">{RETAILER_META[group.retailerId]?.name || group.retailerId}</div>
-                                                                        <div className="text-[10px] text-slate-500 font-bold">{productCountLabel(group.items.length)}</div>
+                                                    {basketOptimizer.recommended.groups.map((group) => {
+                                                        const groupBaseline = group.items.reduce((sum, item) => sum + baselineForProduct(item.id), 0);
+                                                        const groupSavings = Math.max(0, groupBaseline - group.total);
+                                                        const completion = Math.round((group.items.length / Math.max(activeBasketProducts.length, 1)) * 100);
+
+                                                        return (
+                                                            <details key={group.retailerId} className="group bg-input-custom rounded-2xl border border-border-custom overflow-hidden" open>
+                                                                <summary className="list-none cursor-pointer p-4 space-y-4">
+                                                                    <div className="flex items-center justify-between gap-3">
+                                                                        <div className="flex items-center gap-3 min-w-0">
+                                                                            <img src={retailerLogoUrl(group.retailerId)} alt="" className="w-9 h-9 rounded-full object-cover" />
+                                                                            <div className="min-w-0">
+                                                                                <div className="text-sm font-black truncate">{RETAILER_META[group.retailerId]?.name || group.retailerId}</div>
+                                                                                <div className="text-[10px] text-slate-500 font-bold">{productCountLabel(group.items.length)}</div>
+                                                                            </div>
+                                                                        </div>
+                                                                        <strong className="text-sm text-emerald-600 dark:text-emerald-400">€{group.total.toFixed(2)}</strong>
                                                                     </div>
+
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <div className="rounded-xl bg-background/70 p-2">
+                                                                            <span className="block text-[9px] font-black uppercase text-slate-400">{copy.subtotal}</span>
+                                                                            <strong className="text-xs text-slate-850 dark:text-slate-100">€{group.total.toFixed(2)}</strong>
+                                                                        </div>
+                                                                        <div className="rounded-xl bg-background/70 p-2">
+                                                                            <span className="block text-[9px] font-black uppercase text-slate-400">{copy.savings}</span>
+                                                                            <strong className="text-xs text-emerald-600 dark:text-emerald-400">€{groupSavings.toFixed(2)}</strong>
+                                                                        </div>
+                                                                        <div className="rounded-xl bg-background/70 p-2">
+                                                                            <span className="block text-[9px] font-black uppercase text-slate-400">{copy.availableProducts}</span>
+                                                                            <strong className="text-xs text-slate-850 dark:text-slate-100">{completion}%</strong>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="h-2 rounded-full bg-background overflow-hidden">
+                                                                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${completion}%` }} />
+                                                                    </div>
+                                                                </summary>
+                                                                <div className="px-4 pb-4 space-y-2">
+                                                                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">{copy.checklist}</div>
+                                                                    {group.items.map((item) => (
+                                                                        <div key={item.id} className="flex items-center justify-between gap-3 text-xs">
+                                                                            <span className="truncate text-slate-650 dark:text-slate-300">{item.name}</span>
+                                                                            <span className="font-bold text-slate-850 dark:text-slate-100">€{item.price.toFixed(2)}</span>
+                                                                        </div>
+                                                                    ))}
                                                                 </div>
-                                                                <strong className="text-sm text-emerald-600 dark:text-emerald-400">€{group.total.toFixed(2)}</strong>
-                                                            </summary>
-                                                            <div className="px-4 pb-4 space-y-2">
-                                                                {group.items.map((item) => (
-                                                                    <div key={item.id} className="flex items-center justify-between gap-3 text-xs">
-                                                                        <span className="truncate text-slate-650 dark:text-slate-300">{item.name}</span>
-                                                                        <span className="font-bold text-slate-850 dark:text-slate-100">€{item.price.toFixed(2)}</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </details>
-                                                    ))}
+                                                            </details>
+                                                        );
+                                                    })}
                                                 </div>
                                                 {basketOptimizer.recommended.missingItems.length > 0 && (
                                                     <div className="mt-4 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs text-amber-700 dark:text-amber-300">
