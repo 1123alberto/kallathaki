@@ -576,6 +576,7 @@ export default function KallathakiApp() {
     // Chart ref
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<{ destroy: () => void } | null>(null);
+    const categorySectionRef = useRef<HTMLDivElement>(null);
 
     // Initialize Theme and LocalStorage state
     useEffect(() => {
@@ -1455,7 +1456,7 @@ export default function KallathakiApp() {
                     {/* Header bar */}
                     <header className="px-4 py-3 sm:px-6 border-b border-border-custom bg-panel-bg flex flex-wrap gap-3 items-center justify-between">
                         
-                        <div className="flex items-center gap-3 flex-1 min-w-[260px]">
+                        <div className="flex items-center gap-3 flex-1 min-w-[180px]">
                             <button className={`h-10 px-3 rounded-xl border text-xs font-bold transition flex items-center gap-2 shrink-0 ${selectedCategoryId ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-700 dark:text-indigo-300' : 'bg-background border-border-custom hover:bg-input-custom text-slate-700 dark:text-slate-300'}`} onClick={() => setIsCategoryBrowserOpen(true)} aria-label={t('openCategories')}>
                                 <Menu className="w-5 h-5" />
                                 <span className="hidden sm:inline">{categoryName(currentCategoryNode) || t('categories')}</span>
@@ -1468,31 +1469,6 @@ export default function KallathakiApp() {
                                 <ShoppingBasket className="w-6 h-6 text-indigo-500" />
                                 <span className="hidden sm:inline text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-500 to-emerald-500 bg-clip-text text-transparent">Kallathaki</span>
                             </button>
-                            
-                            <div className="relative flex-1 min-w-[160px] max-w-2xl">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                <input 
-                                    id="productSearchInput"
-                                    type="text" 
-                                    value={searchTerm}
-                                    onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                    placeholder={t('productSearchPlaceholder')}
-                                    aria-label={t('productSearch')}
-                                    className="w-full pl-9 pr-10 py-2 text-base md:text-sm bg-input-custom border border-transparent focus:border-indigo-500 focus:bg-background rounded-xl outline-none transition text-foreground"
-                                  />
-                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                                    {searchTerm && (
-                                        <button 
-                                            onClick={() => setSearchTerm('')} 
-                                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
-                                            title={t('clearSearch')}
-                                            aria-label={t('clearSearch')}
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
                         </div>
 
                         <div className="flex items-center gap-3">
@@ -1559,12 +1535,12 @@ export default function KallathakiApp() {
                                             <div className="mt-6 flex flex-wrap gap-4">
                                                 <button
                                                     onClick={() => {
-                                                        const input = document.querySelector<HTMLInputElement>('#productSearchInput');
-                                                        input?.focus();
+                                                        categorySectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                        window.setTimeout(() => categorySectionRef.current?.focus(), 250);
                                                     }}
                                                     className="inline-flex items-center gap-2 px-6 py-3.5 bg-white text-indigo-800 hover:bg-indigo-50 font-bold rounded-2xl shadow-md transition duration-250 cursor-pointer text-sm"
                                                 >
-                                                    <Search className="w-4 h-4 text-indigo-800" />
+                                                    <LayoutGrid className="w-4 h-4 text-indigo-800" />
                                                     <span>{t('startCompare')}</span>
                                                 </button>
                                                 <button 
@@ -1660,7 +1636,11 @@ export default function KallathakiApp() {
                                     </div>
 
                                     {/* Quick Category Navigation */}
-                                    <div className="space-y-5">
+                                    <div
+                                        ref={categorySectionRef}
+                                        tabIndex={-1}
+                                        className="space-y-5 scroll-mt-6 focus:outline-none"
+                                    >
                                         <div className="px-1">
                                             <h3 className="text-base font-bold text-slate-800 dark:text-slate-200">
                                                 {t('discoverByCategory')}
