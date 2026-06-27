@@ -25,6 +25,8 @@ jobs:
 
       - name: Refresh snapshot files
         run: node scripts/refresh-products-snapshot.mjs
+        env:
+          GOV_API_URL: https://www.kallathaki.gr
 
       - name: Commit updated snapshot
         run: |
