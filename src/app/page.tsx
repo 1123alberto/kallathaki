@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
@@ -433,6 +432,12 @@ const sanitizeProduct = (prod: RawProduct): Product => {
     } as Product;
 };
 
+const sanitizeCategoryTree = (nodes: CategoryNode[]): CategoryNode[] => nodes.map((node) => ({
+    ...node,
+    image_url: proxyGovAssetUrl(node.image_url),
+    children: node.children ? sanitizeCategoryTree(node.children) : undefined
+}));
+
 export default function KallathakiApp() {
     // Theme state
     const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -694,12 +699,6 @@ export default function KallathakiApp() {
         }
         return currentNode;
     };
-
-    const sanitizeCategoryTree = (nodes: CategoryNode[]): CategoryNode[] => nodes.map((node) => ({
-        ...node,
-        image_url: proxyGovAssetUrl(node.image_url),
-        children: node.children ? sanitizeCategoryTree(node.children) : undefined
-    }));
 
     const currentCategoryNode = useMemo(() => {
         return getCurrentCategoryNode(categoryPath, categories);
