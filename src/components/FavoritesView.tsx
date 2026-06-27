@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, Bell, ShoppingBag, ShoppingBasket, Trash2, Share2, Store, Info, Trophy, PiggyBank, MapPin, RefreshCw } from 'lucide-react';
+import { Heart, ShoppingBag, ShoppingBasket, Trash2, Share2, Store, Info, Trophy, PiggyBank, MapPin, RefreshCw } from 'lucide-react';
 
 interface PriceStat {
     min_price: number;
@@ -85,10 +85,6 @@ interface FavoritesViewProps {
     activeBasketIds: string[];
     favoritesSubTab: 'pantry' | 'basket';
     setFavoritesSubTab: (tab: 'pantry' | 'basket') => void;
-    pushSupported: boolean;
-    isSubscribed: boolean;
-    subscribeToPush: () => void;
-    unsubscribeFromPush: () => void;
     toggleBasketItem: (id: string) => void;
     toggleFavorite: (e: React.MouseEvent, product: Product) => void;
     clearAllFavorites: () => void;
@@ -103,8 +99,6 @@ interface FavoritesViewProps {
     setIsShareOpen: (open: boolean) => void;
     setIsHelperOpen: (open: boolean) => void;
     setHelperRetailer: (retailerId: string) => void;
-    discountedBasketProducts: Product[];
-    pushStatus: string;
     showOptimizerResults: boolean;
     setShowOptimizerResults: (show: boolean) => void;
     basketOptimizer: BasketOptimizerResult;
@@ -116,12 +110,6 @@ const BASKET_COPY = {
     el: {
         emptyFavoritesTitle: 'Η λίστα σας είναι άδεια',
         emptyFavoritesText: 'Προσθέστε προϊόντα στα αγαπημένα σας για να τα συγκρίνετε και να τα βελτιστοποιήσετε εδώ.',
-        saleAlertsTitle: 'Ειδοποιήσεις για Προσφορές',
-        saleAlertsText: 'Λάβετε ειδοποίηση όταν προϊόντα του καλαθιού σας έχουν ένδειξη προσφοράς.',
-        saleAlertsNow: 'Τώρα',
-        onOffer: 'σε προσφορά',
-        disable: 'Απενεργοποίηση',
-        enable: 'Ενεργοποίηση',
         favoritesTitle: 'Τα Αγαπημένα μου',
         favoritesIntro: 'Διαχειριστείτε τη λίστα Pantry και το ενεργό καλάθι αγορών σας.',
         pantryTab: 'Λίστα Pantry',
@@ -192,12 +180,6 @@ const BASKET_COPY = {
     en: {
         emptyFavoritesTitle: 'Your Pantry List is empty',
         emptyFavoritesText: 'Save products here so you can compare prices and build a smarter basket later.',
-        saleAlertsTitle: 'Offer Alerts',
-        saleAlertsText: 'Get notified when products in your basket go on offer.',
-        saleAlertsNow: 'Now',
-        onOffer: 'on offer',
-        disable: 'Turn Off',
-        enable: 'Turn On',
         favoritesTitle: 'My Grocery List',
         favoritesIntro: 'Manage your Pantry List and choose what goes into your Active Basket.',
         pantryTab: 'Pantry List',
@@ -285,10 +267,6 @@ export default function FavoritesView({
     activeBasketIds,
     favoritesSubTab,
     setFavoritesSubTab,
-    pushSupported,
-    isSubscribed,
-    subscribeToPush,
-    unsubscribeFromPush,
     toggleBasketItem,
     toggleFavorite,
     clearAllFavorites,
@@ -303,8 +281,6 @@ export default function FavoritesView({
     setIsShareOpen,
     setIsHelperOpen,
     setHelperRetailer,
-    discountedBasketProducts,
-    pushStatus,
     showOptimizerResults,
     setShowOptimizerResults,
     basketOptimizer,
@@ -382,42 +358,6 @@ export default function FavoritesView({
                 </div>
             ) : (
                 <div className="space-y-6">
-                    {pushSupported && (
-                        <div className="bg-amber-50/50 dark:bg-amber-950/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-amber-500/10 rounded-xl text-amber-600 dark:text-amber-400">
-                                    <Bell className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                        {copy.saleAlertsTitle}
-                                    </h4>
-                                    <p className="text-[11px] text-slate-500 mt-0.5">
-                                        {copy.saleAlertsText}
-                                        {discountedBasketProducts.length > 0 && (
-                                            <span className="font-bold text-emerald-600 dark:text-emerald-400"> {copy.saleAlertsNow}: {discountedBasketProducts.length} {copy.onOffer}.</span>
-                                        )}
-                                    </p>
-                                    {pushStatus && (
-                                        <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 mt-1">
-                                            {pushStatus}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                            <button
-                                onClick={isSubscribed ? unsubscribeFromPush : subscribeToPush}
-                                className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
-                                    isSubscribed
-                                        ? 'bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                                        : 'bg-amber-600 hover:bg-amber-700 text-white shadow-sm'
-                                }`}
-                            >
-                                {isSubscribed ? copy.disable : copy.enable}
-                            </button>
-                        </div>
-                    )}
-                    
                     {/* Sub-tab Navigation */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-border-custom gap-4">
                         <div>

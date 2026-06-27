@@ -31,6 +31,14 @@ type FallbackProduct = {
   };
 };
 
+type StatsResponse = {
+  timestamp?: string;
+  catalog_updated_at?: string;
+  catalog_product_updated_at?: string;
+  total_products?: number;
+  products_on_discount?: number;
+};
+
 const apiCache = new Map<string, CacheEntry>();
 const CACHE_TTL_BY_PATH: Array<[RegExp, number]> = [
   [/^products\//, 60 * 1000],
@@ -176,17 +184,37 @@ async function fetchUpstream(url: string, init: RequestInit, targetPath: string)
 
 function staticFallbackForGet(targetPath: string) {
   if (targetPath === 'meta/categories/tree') return categoriesFallback;
-  if (targetPath === 'meta/stats') return statsFallback;
+  if (targetPath === 'meta/stats') return withCatalogFreshness(statsFallback);
 
   return null;
 }
 
-function productSearchFallback(payload: ProductSearchPayload) {
+function catalogGeneratedAt() {
+  const fallback = productsFallback as { generated_at?: string };
+  return typeof fallback.generated_at === 'string' ? fallback.generated_at : undefined;
+}
+
+function catalogProductUpdatedAt() {
+  const fallback = productsFallback as { product_updated_at_max?: string };
+  return typeof fallback.product_updated_at_max === 'string'
+    ? fallback.product_updated_at_max
+    : undefined;
+}
+
+function withCatalogFreshness(stats: StatsResponse) {
+  return {
+    ...stats,
+    catalog_updated_at: catalogGeneratedAt() || stats.catalog_updated_at || stats.timestamp,
+    catalog_product_updated_at: catalogProductUpdatedAt() || stats.catalog_product_updated_at
+  };
+}
+
+function productSearchFallback(payload: ProductSearchPayload, sourceProducts: FallbackProduct[]) {
   const page = Math.max(1, Number(payload.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(payload.page_size) || 24));
   const titleQuery = String(payload.title || '').trim().toLocaleLowerCase('el-GR');
   const categoryId = String(payload.category_id || '').trim();
-  const allProducts = (productsFallback.products || []) as FallbackProduct[];
+  const allProducts = sourceProducts;
 
   const filtered = allProducts.filter((product) => {
     if (categoryId && !(product.category_ids || []).includes(categoryId)) {
@@ -254,8 +282,11 @@ export async function GET(
 
   const upstream = await fetchUpstream(url, { headers: upstreamHeaders() }, targetPath);
   if (upstream.ok) {
-    cacheResponse(cacheKey, upstream.data);
-    return jsonWithSource(upstream.data, undefined, 'upstream');
+    const responseData = targetPath === 'meta/stats'
+      ? withCatalogFreshness(upstream.data as StatsResponse)
+      : upstream.data;
+    cacheResponse(cacheKey, responseData);
+    return jsonWithSource(responseData, undefined, 'upstream');
   }
 
   if (cached?.isStaleUsable && canUseStaleCache(targetPath)) {
@@ -315,7 +346,11 @@ export async function POST(
 
   if (targetPath === 'products/search') {
     console.warn('[Gov API products/search unavailable]', { targetPath, status: upstream.status });
-    return jsonWithSource(productSearchFallback(body), undefined, 'static-fallback');
+    return jsonWithSource(
+      productSearchFallback(body, (productsFallback.products || []) as FallbackProduct[]),
+      undefined,
+      'static-fallback'
+    );
   }
 
   return jsonWithSource(

@@ -15,7 +15,7 @@
 *   **🛒 Μηχανή Βελτιστοποίησης Καλαθιού (Basket Optimization Engine)**:
     *   **Αγορά από 1 Σούπερ Μάρκετ (Single Store)**: Υπολογισμός του συνολικού κόστους για όλα τα επιλεγμένα προϊόντα σε ένα μόνο κατάστημα (εμφανίζεται μόνο αν το κατάστημα διαθέτει το 100% των προϊόντων του καλαθιού σας).
     *   **Βέλτιστος Διαμοιρασμός (Split-Trip)**: Διαχωρισμός της λίστας στα καταστήματα με τις χαμηλότερες τιμές ανά προϊόν για τη μέγιστη δυνατή εξοικονόμηση. Εμφανίζει λεπτομερή κατανομή ανά κατάστημα με υποσύνολο, κέρδος εξοικονόμησης, ποσοστό κάλυψης, και διαδραστικό checklist.
-*   **🔔 Ειδοποιήσεις Προσφορών (Sale Alerts & Web Push)**: Δυνατότητα εγγραφής σε Web Push notifications. Το σύστημα ελέγχει στο background τις τιμές των προϊόντων του καλαθιού σας και στέλνει ειδοποίηση εάν κάποιο προϊόν εμφανίσει έκπτωση ή χαμηλότερη τιμή.
+*   **🕘 Ημερήσιο Snapshot Τιμών**: Η εφαρμογή χρησιμοποιεί καθημερινό snapshot του καταλόγου ως fallback, ώστε η εμπειρία να παραμένει χρήσιμη ακόμη και όταν το upstream API δεν αποκρίνεται.
 *   **🛒 e-Shop Order Helper (Βοηθός Παραγγελίας e-Shop)**: Δυνατότητα γρήγορης εύρεσης και προσθήκης των προϊόντων του καλαθιού στα επίσημα online e-shops των supermarkets μέσω EAN barcode deep-linking ή ονομασίας (fallback).
 *   **🗺️ Εύρεση Πλησιέστερου Καταστήματος (Χάρτης)**: Με ένα κλικ πάνω σε οποιοδήποτε σούπερ μάρκετ, η εφαρμογή εντοπίζει την τοποθεσία σας και εμφανίζει το πλησιέστερο φυσικό κατάστημα σε ενσωματωμένο χάρτη της Google, με δυνατότητα άμεσης πλοήγησης (GPS directions).
 *   **💬 Κοινοποίηση Λίστας**: Δυνατότητα αντιγραφής της λίστας αγορών σε απλή μορφή κειμένου (κατάλληλη για αποστολή σε Viber, WhatsApp, SMS) ή παραγωγής Web Link για εισαγωγή της λίστας σε άλλη συσκευή.
@@ -31,8 +31,8 @@
 *   **Styling**: [Tailwind CSS v4](https://tailwindcss.com/) (CSS-first configuration, tokens και dark mode στο `src/app/globals.css`)
 *   **Εικονίδια**: [Lucide React](https://lucide.dev/)
 *   **Σάρωση Barcode**: [html5-qrcode](https://github.com/mebjas/html5-qrcode)
-*   **Push Notifications**: Native Service Worker & Web Push API (με βιβλιοθήκη `web-push` στο backend)
-*   **Βάση Δεδομένων / Persistence**: Redis (μέσω Upstash KV API) για την αποθήκευση των Push Subscriptions, και `localStorage` στον client για τα προϊόντα του καλαθιού και τις προτιμήσεις του χρήστη.
+*   **Automation**: GitHub Actions για την καθημερινή ανανέωση του fallback snapshot
+*   **Βάση Δεδομένων / Persistence**: `localStorage` στον client για τα προϊόντα του καλαθιού και τις προτιμήσεις του χρήστη.
 
 ---
 
@@ -44,9 +44,8 @@ kallathaki-app/
 │   └── products/              # Σχεδιασμός & Φιλοσοφία Προϊόντος (Phase 2 & 3)
 ├── src/
 │   ├── app/
-│   │   ├── api/               # API Proxy (CORS bypass) & Web Push endpoints
-│   │   │   ├── [...path]/     # Δυναμικό API proxy για το posokanei.gov.gr
-│   │   │   └── push/          # Διαχείριση Web Push notifications & Sale checks
+│   │   ├── api/               # API Proxy (CORS bypass)
+│   │   │   └── [...path]/     # Δυναμικό API proxy για το posokanei.gov.gr
 │   │   ├── guide/             # Σελίδα Οδηγού Χρήσης (Greek/English)
 │   │   ├── globals.css        # Tailwind v4 configuration, theme variables & themes
 │   │   ├── layout.tsx         # Root Layout
@@ -55,10 +54,7 @@ kallathaki-app/
 │   │   ├── BarcodeScannerModal.tsx
 │   │   ├── EShopHelperModal.tsx
 │   │   └── FavoritesView.tsx  # modular UI για Αγαπημένα & Basket Optimizer
-│   └── lib/                   # Utility helpers & push configuration
-│       ├── push-store.ts      # Αποθήκευση/ανάκτηση push subscriptions (Redis/local file fallback)
-│       ├── push-types.ts      # TypeScript interfaces για Web Push
-│       └── sale-alerts.ts     # Αλγόριθμος εντοπισμού προσφορών καλαθιού
+│   └── lib/                   # Utility helpers
 ├── public/                    # Στατικά αρχεία (εικόνες, logos)
 ├── package.json               # Dependencies & scripts
 └── README.md                  # Τεκμηρίωση εφαρμογής

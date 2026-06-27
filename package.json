@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "refresh:snapshot": "node scripts/refresh-products-snapshot.mjs"
   },
   "dependencies": {
     "@types/web-push": "^3.6.4",

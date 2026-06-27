@@ -3,11 +3,11 @@
 
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { 
-    Search, Moon, Sun, Heart, Share2, Copy, Link as LinkIcon, 
+import {
+    Search, Moon, Sun, Heart, Share2, Copy, Link as LinkIcon,
     X, Sparkles, ShoppingBag, ChevronRight, ChevronLeft, LayoutGrid,
     Store, Percent, Trophy, Info, PiggyBank, RefreshCw, Menu, ShoppingBasket,
-    MapPin, Camera, ShieldCheck, Clock3, UserCircle
+    MapPin, Camera, ShieldCheck, Clock3, UserCircle, AlertTriangle
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
@@ -35,18 +35,25 @@ const formatProductUpdatedAt = (product: Product) => {
     const latest = dates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0];
     return formatGreekDate(latest);
 };
+const statsCatalogUpdatedAt = (stats?: Stats | null) => stats?.catalog_updated_at || stats?.timestamp || '';
 
-const urlBase64ToUint8Array = (base64String: string) => {
-    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
+const athensDateKey = (date?: string | Date) => {
+    if (!date) return '';
+    return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Athens',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(typeof date === 'string' ? new Date(date) : date);
+};
 
-    for (let i = 0; i < rawData.length; i += 1) {
-        outputArray[i] = rawData.charCodeAt(i);
-    }
-
-    return outputArray;
+const dayDiffFromAthensKeys = (olderKey: string, newerKey: string) => {
+    if (!olderKey || !newerKey) return 0;
+    const [olderYear, olderMonth, olderDay] = olderKey.split('-').map(Number);
+    const [newerYear, newerMonth, newerDay] = newerKey.split('-').map(Number);
+    const olderUtc = Date.UTC(olderYear, olderMonth - 1, olderDay);
+    const newerUtc = Date.UTC(newerYear, newerMonth - 1, newerDay);
+    return Math.max(0, Math.round((newerUtc - olderUtc) / 86400000));
 };
 
 // Allowed 6 supermarkets
@@ -128,6 +135,8 @@ interface RawProduct {
 
 interface Stats {
     timestamp: string;
+    catalog_updated_at?: string;
+    catalog_product_updated_at?: string;
     total_products: number;
     products_on_discount: number;
 }
@@ -141,6 +150,10 @@ const UI_TEXT = {
         home: 'Αρχική',
         productSearch: 'Αναζήτηση προϊόντων',
         productSearchPlaceholder: 'Αναζήτηση προϊόντων (π.χ. γάλα, φέτα, ρύζι)...',
+        freshnessAlertTitle: 'Οι τιμές δεν έχουν ανανεωθεί σήμερα',
+        freshnessAlertBody: 'Η πιο πρόσφατη ενημέρωση του καταλόγου είναι',
+        freshnessAlertBodySuffix: 'Μέχρι να ανέβει νέο snapshot, οι τιμές μπορεί να είναι παλιές.',
+        freshnessAlertDismiss: 'Συνέχεια',
         clearSearch: 'Καθαρισμός αναζήτησης',
         products: 'Προϊόντα',
         basket: 'Καλάθι',
@@ -187,6 +200,10 @@ const UI_TEXT = {
         home: 'Home',
         productSearch: 'Search products',
         productSearchPlaceholder: 'Search products (e.g. milk, feta, rice)...',
+        freshnessAlertTitle: 'Prices have not been refreshed today',
+        freshnessAlertBody: 'The latest catalog refresh is from',
+        freshnessAlertBodySuffix: 'Until a new snapshot is published, prices may be out of date.',
+        freshnessAlertDismiss: 'Continue',
         clearSearch: 'Clear search',
         products: 'Products',
         basket: 'Basket',
@@ -285,6 +302,9 @@ export default function KallathakiApp() {
     const [activeBasketIds, setActiveBasketIds] = useState<string[]>([]);
     const [favoritesSubTab, setFavoritesSubTab] = useState<'pantry' | 'basket'>('pantry');
     const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [showFreshnessNotice, setShowFreshnessNotice] = useState(false);
+    const [freshnessNoticeDate, setFreshnessNoticeDate] = useState('');
+    const [freshnessNoticeAgeDays, setFreshnessNoticeAgeDays] = useState(0);
     const [barcodeCache, setBarcodeCache] = useState<Record<string, Product>>({});
     const [isHelperOpen, setIsHelperOpen] = useState(false);
     const [helperRetailer, setHelperRetailer] = useState<string>('');
@@ -294,12 +314,6 @@ export default function KallathakiApp() {
     const activeBasketProducts = useMemo(() => {
         return favorites.filter(p => activeBasketIds.includes(p.id));
     }, [favorites, activeBasketIds]);
-
-    const discountedBasketProducts = useMemo(() => {
-        return activeBasketProducts.filter((product) =>
-            product.retailer_prices.some((price) => price.is_discount || Number(price.discount_percentage || 0) > 0)
-        );
-    }, [activeBasketProducts]);
 
     useEffect(() => {
         setShowOptimizerResults(false);
@@ -325,102 +339,6 @@ export default function KallathakiApp() {
         setActiveBasketIds([]);
         localStorage.setItem('posokanei_active_basket', JSON.stringify([]));
     };
-
-    const [pushSupported, setPushSupported] = useState(false);
-    const [isSubscribed, setIsSubscribed] = useState(false);
-    const [pushStatus, setPushStatus] = useState('');
-
-    const basketProductsForPush = useMemo(() => activeBasketProducts.map((product) => ({
-        id: product.id,
-        name: product.name,
-        brand: product.brand,
-        image_url: product.image_url,
-        updated_at: product.updated_at,
-        retailer_prices: product.retailer_prices
-    })), [activeBasketProducts]);
-
-    const syncPushBasket = useCallback(async (subscription?: PushSubscription | null) => {
-        if (!pushSupported) return;
-        const registration = await navigator.serviceWorker.ready;
-        const currentSubscription = subscription || await registration.pushManager.getSubscription();
-        if (!currentSubscription) return;
-
-        const response = await fetch('/api/push/subscriptions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                subscription: currentSubscription.toJSON(),
-                basketProducts: basketProductsForPush
-            })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Push basket sync failed: ${response.status} ${errorText}`);
-        }
-    }, [basketProductsForPush, pushSupported]);
-
-    const subscribeToPush = async () => {
-        if (!pushSupported) return;
-        try {
-            const permission = await Notification.requestPermission();
-            if (permission !== 'granted') {
-                alert(language === 'en' ? 'Notification permission was denied.' : 'Η άδεια για ειδοποιήσεις απορρίφθηκε.');
-                return;
-            }
-
-            const keyResponse = await fetch('/api/push/public-key', { cache: 'no-store' });
-            if (!keyResponse.ok) {
-                setPushStatus(language === 'en' ? 'Offer alerts are not ready on the server yet.' : 'Οι ειδοποιήσεις προσφορών δεν είναι ακόμη έτοιμες στον server.');
-                return;
-            }
-
-            const { publicKey } = await keyResponse.json();
-            const registration = await navigator.serviceWorker.ready;
-            const existingSubscription = await registration.pushManager.getSubscription();
-            const subscription = existingSubscription || await registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(publicKey)
-            });
-
-            await syncPushBasket(subscription);
-            localStorage.setItem('kallathaki_sale_notifications', 'true');
-            setIsSubscribed(true);
-            setPushStatus(language === 'en' ? 'Offer alerts are on.' : 'Οι ειδοποιήσεις προσφορών είναι ενεργές.');
-        } catch (error) {
-            console.error('Failed to enable sale notifications:', error);
-            alert(language === 'en' ? 'We couldn’t turn on notifications. Please try again from your browser settings.' : 'Σφάλμα κατά την ενεργοποίηση ειδοποιήσεων. Δοκιμάστε ξανά από τις ρυθμίσεις του browser.');
-        }
-    };
-
-    const unsubscribeFromPush = async () => {
-        try {
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.getSubscription();
-            if (subscription) {
-                await fetch('/api/push/subscriptions', {
-                    method: 'DELETE',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ endpoint: subscription.endpoint })
-                });
-                await subscription.unsubscribe();
-            }
-
-            localStorage.setItem('kallathaki_sale_notifications', 'false');
-            setIsSubscribed(false);
-            setPushStatus('');
-            alert(language === 'en' ? 'Offer alerts are off.' : 'Απενεργοποιήθηκαν οι ειδοποιήσεις για προσφορές.');
-        } catch (error) {
-            console.error('Failed to disable sale notifications:', error);
-        }
-    };
-
-    useEffect(() => {
-        if (!mounted || !isSubscribed || !pushSupported) return;
-        syncPushBasket().catch((error) => {
-            console.error('Failed to update push basket:', error);
-        });
-    }, [isSubscribed, mounted, pushSupported, syncPushBasket]);
 
     const refreshSavedProducts = useCallback(async (productsToRefresh = favorites) => {
         if (productsToRefresh.length === 0 || isRefreshingSavedProducts) return;
@@ -631,20 +549,6 @@ export default function KallathakiApp() {
                 setActiveTab('favorites');
                 setFavoritesSubTab('basket');
             }
-
-            // Check sale notification support
-            if ('serviceWorker' in navigator && 'Notification' in window && 'PushManager' in window) {
-                setPushSupported(true);
-                navigator.serviceWorker.ready
-                    .then((registration) => registration.pushManager.getSubscription())
-                    .then((subscription) => {
-                        setIsSubscribed(Boolean(subscription) && Notification.permission === 'granted');
-                    })
-                    .catch((error) => {
-                        console.error('Failed to read push subscription:', error);
-                        setIsSubscribed(localStorage.getItem('kallathaki_sale_notifications') === 'true' && Notification.permission === 'granted');
-                    });
-            }
             
             setMounted(true);
         }, 0);
@@ -666,6 +570,14 @@ export default function KallathakiApp() {
         const nextLanguage: AppLanguage = language === 'el' ? 'en' : 'el';
         setLanguage(nextLanguage);
         localStorage.setItem('kallathaki_language', nextLanguage);
+    };
+
+    const dismissFreshnessNotice = () => {
+        const snapshotKey = athensDateKey(freshnessNoticeDate);
+        if (snapshotKey) {
+            localStorage.setItem('kallathaki_freshness_notice_dismissed_for', snapshotKey);
+        }
+        setShowFreshnessNotice(false);
     };
 
     // Load initial metadata
@@ -693,6 +605,27 @@ export default function KallathakiApp() {
         };
         fetchMetadata();
     }, []);
+
+    useEffect(() => {
+        if (!mounted) return;
+        const snapshotDate = statsCatalogUpdatedAt(stats);
+        if (!snapshotDate) return;
+
+        const snapshotKey = athensDateKey(snapshotDate);
+        const todayKey = athensDateKey(new Date());
+        const ageDays = dayDiffFromAthensKeys(snapshotKey, todayKey);
+
+        setFreshnessNoticeDate(snapshotDate);
+        setFreshnessNoticeAgeDays(ageDays);
+
+        if (ageDays < 1) {
+            setShowFreshnessNotice(false);
+            return;
+        }
+
+        const dismissedFor = localStorage.getItem('kallathaki_freshness_notice_dismissed_for');
+        setShowFreshnessNotice(dismissedFor !== snapshotKey);
+    }, [mounted, stats]);
 
     // Fetch Products when filters change
     useEffect(() => {
@@ -1444,7 +1377,7 @@ export default function KallathakiApp() {
                     <div className="p-4 border-t border-border-custom text-xs text-slate-500 space-y-2 bg-input-custom">
                         <div className="flex items-start gap-2 font-semibold text-slate-650 dark:text-slate-300">
                             <ShieldCheck className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
-                            <span>Τιμές από επίσημα δεδομένα{stats ? ` — ενημέρωση ${formatGreekDate(stats.timestamp)}` : ''}</span>
+                            <span>Τιμές από επίσημα δεδομένα{statsCatalogUpdatedAt(stats) ? ` — ενημέρωση ${formatGreekDate(statsCatalogUpdatedAt(stats))}` : ''}</span>
                         </div>
                         <p className="leading-relaxed">
                             Τα δεδομένα προέρχονται από δημόσια διαθέσιμες πηγές τιμών.
@@ -1515,6 +1448,36 @@ export default function KallathakiApp() {
 
                     {/* Content Area */}
                     <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6 transition-colors duration-300 scroll-smooth">
+                        {showFreshnessNotice && freshnessNoticeDate && (
+                            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/20">
+                                <div className="flex items-start gap-3">
+                                    <div className="mt-0.5 rounded-xl bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
+                                        <AlertTriangle className="h-5 w-5" />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-sm font-black text-slate-900 dark:text-slate-100">
+                                            {t('freshnessAlertTitle')}
+                                        </div>
+                                        <p className="mt-1 text-sm text-slate-700 dark:text-slate-300">
+                                            {t('freshnessAlertBody')} <span className="font-bold">{formatGreekDate(freshnessNoticeDate)}</span>.
+                                            {' '}
+                                            {freshnessNoticeAgeDays > 1
+                                                ? `${freshnessNoticeAgeDays} ${language === 'en' ? 'days' : 'ημέρες'} `
+                                                : `${language === 'en' ? '1 day ' : '1 ημέρα '}`}
+                                            {language === 'en' ? 'old.' : 'παλιά.'}
+                                            {' '}
+                                            {t('freshnessAlertBodySuffix')}
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={dismissFreshnessNotice}
+                                        className="rounded-xl bg-amber-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-amber-700"
+                                    >
+                                        {t('freshnessAlertDismiss')}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {activeTab === 'products' ? (
                             isHomeScreen ? (
                                 // BRAND-NEW HOMEPAGE DASHBOARD
@@ -1526,7 +1489,7 @@ export default function KallathakiApp() {
                                         <div className="relative z-10 max-w-2xl">
                                             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 text-white text-[11px] font-semibold mb-4">
                                                 <ShieldCheck className="w-3.5 h-3.5 text-white/80" />
-                                                <span>{t('officialData')}{stats ? ` — ${language === 'en' ? 'updated' : 'ενημέρωση'} ${formatGreekDate(stats.timestamp)}` : ''}</span>
+                                                <span>{t('officialData')}{statsCatalogUpdatedAt(stats) ? ` — ${language === 'en' ? 'updated' : 'ενημέρωση'} ${formatGreekDate(statsCatalogUpdatedAt(stats))}` : ''}</span>
                                             </div>
                                             <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight leading-tight bg-gradient-to-r from-white via-emerald-100 to-amber-200 bg-clip-text text-transparent">
                                                 {t('compareTitle')}
@@ -1618,7 +1581,7 @@ export default function KallathakiApp() {
                                                 },
                                                 {
                                                     label: language === 'en' ? 'Fresh prices' : 'Πρόσφατες τιμές',
-                                                    value: stats ? formatGreekDate(stats.timestamp) : (language === 'en' ? 'Today' : 'Σήμερα'),
+                                                    value: statsCatalogUpdatedAt(stats) ? formatGreekDate(statsCatalogUpdatedAt(stats)) : (language === 'en' ? 'Today' : 'Σήμερα'),
                                                     desc: language === 'en' ? 'Latest price update' : 'Τελευταία ενημέρωση δεδομένων',
                                                     icon: <Clock3 className="w-5 h-5 text-violet-500" />,
                                                     bgColor: 'bg-violet-500/10'
@@ -2047,10 +2010,6 @@ export default function KallathakiApp() {
                                 activeBasketIds={activeBasketIds}
                                 favoritesSubTab={favoritesSubTab}
                                 setFavoritesSubTab={setFavoritesSubTab}
-                                pushSupported={pushSupported}
-                                isSubscribed={isSubscribed}
-                                subscribeToPush={subscribeToPush}
-                                unsubscribeFromPush={unsubscribeFromPush}
                                 toggleBasketItem={toggleBasketItem}
                                 toggleFavorite={toggleFavorite}
                                 clearAllFavorites={clearAllFavorites}
@@ -2065,8 +2024,6 @@ export default function KallathakiApp() {
                                 setIsShareOpen={setIsShareOpen}
                                 setIsHelperOpen={setIsHelperOpen}
                                 setHelperRetailer={setHelperRetailer}
-                                discountedBasketProducts={discountedBasketProducts}
-                                pushStatus={pushStatus}
                                 showOptimizerResults={showOptimizerResults}
                                 setShowOptimizerResults={setShowOptimizerResults}
                                 basketOptimizer={basketOptimizer}
