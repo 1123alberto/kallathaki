@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { startTransition, useDeferredValue, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
     Search, Moon, Sun, Heart, Share2, Copy, Link as LinkIcon,
     X, Sparkles, ShoppingBag, ChevronRight, ChevronLeft, LayoutGrid,
-    Store, Percent, Trophy, Info, PiggyBank, RefreshCw, Menu, ShoppingBasket,
+    Store, Percent, Trophy, Info, RefreshCw, Menu, ShoppingBasket,
     MapPin, Camera, ShieldCheck, Clock3, UserCircle, AlertTriangle, ArrowLeft,
     Check, Trash2
 } from 'lucide-react';
@@ -49,6 +49,15 @@ const dayDiffFromAthensKeys = (olderKey: string, newerKey: string) => {
     const olderUtc = Date.UTC(olderYear, olderMonth - 1, olderDay);
     const newerUtc = Date.UTC(newerYear, newerMonth - 1, newerDay);
     return Math.max(0, Math.round((newerUtc - olderUtc) / 86400000));
+};
+
+const startOfWeek = (date: Date) => {
+    const copy = new Date(date);
+    const day = copy.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    copy.setHours(0, 0, 0, 0);
+    copy.setDate(copy.getDate() + diff);
+    return copy;
 };
 
 // Allowed 6 supermarkets
@@ -470,6 +479,10 @@ export default function KallathakiApp() {
     const [favoriteRetailers, setFavoriteRetailers] = useState<string[]>(ALLOWED_RETAILERS);
     const [profileSubView, setProfileSubView] = useState<'savedBaskets' | 'history' | 'supermarkets' | 'settings' | null>(null);
     const [newBasketName, setNewBasketName] = useState('');
+    const [profileName, setProfileName] = useState('');
+    const [recentSearches, setRecentSearches] = useState<string[]>([]);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+    const [priceAlertsEnabled, setPriceAlertsEnabled] = useState(true);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
 
     useEffect(() => {
@@ -795,9 +808,32 @@ export default function KallathakiApp() {
             } catch (e) {
                 console.error(e);
             }
+        } else {
             loadedBasketIds = loadedFavs.map(p => p.id);
             localStorage.setItem('posokanei_active_basket', JSON.stringify(loadedBasketIds));
         }
+
+        let loadedProfileName = '';
+        const storedProfileName = localStorage.getItem('kallathaki_profile_name');
+        if (storedProfileName) {
+            loadedProfileName = storedProfileName;
+        }
+
+        let loadedRecentSearches: string[] = [];
+        const storedRecentSearches = localStorage.getItem('kallathaki_recent_searches');
+        if (storedRecentSearches) {
+            try {
+                loadedRecentSearches = JSON.parse(storedRecentSearches);
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        const storedNotifications = localStorage.getItem('kallathaki_notifications_enabled');
+        const loadedNotificationsEnabled = storedNotifications === '1';
+
+        const storedPriceAlerts = localStorage.getItem('kallathaki_price_alerts_enabled');
+        const loadedPriceAlertsEnabled = storedPriceAlerts ? storedPriceAlerts === '1' : true;
 
         // Initialize Saved Baskets
         let loadedSavedBaskets: SavedBasket[] = [];
@@ -841,6 +877,10 @@ export default function KallathakiApp() {
             setSavedBaskets(loadedSavedBaskets);
             setShoppingHistory(loadedHistory);
             setFavoriteRetailers(loadedFavoriteRetailers);
+            setProfileName(loadedProfileName);
+            setRecentSearches(loadedRecentSearches);
+            setNotificationsEnabled(loadedNotificationsEnabled);
+            setPriceAlertsEnabled(loadedPriceAlertsEnabled);
             
             // Check for shortcut action
             if (window.location.search.includes('action=scan')) {
@@ -871,6 +911,27 @@ export default function KallathakiApp() {
         const nextLanguage: AppLanguage = language === 'el' ? 'en' : 'el';
         setLanguage(nextLanguage);
         localStorage.setItem('kallathaki_language', nextLanguage);
+    };
+
+    const saveProfileName = (value: string) => {
+        setProfileName(value);
+        localStorage.setItem('kallathaki_profile_name', value);
+    };
+
+    const toggleNotifications = () => {
+        setNotificationsEnabled((prev) => {
+            const next = !prev;
+            localStorage.setItem('kallathaki_notifications_enabled', next ? '1' : '0');
+            return next;
+        });
+    };
+
+    const togglePriceAlerts = () => {
+        setPriceAlertsEnabled((prev) => {
+            const next = !prev;
+            localStorage.setItem('kallathaki_price_alerts_enabled', next ? '1' : '0');
+            return next;
+        });
     };
 
     const dismissFreshnessNotice = () => {
@@ -939,6 +1000,25 @@ export default function KallathakiApp() {
         const dismissedFor = localStorage.getItem('kallathaki_freshness_notice_dismissed_for');
         setShowFreshnessNotice(dismissedFor !== snapshotKey);
     }, [mounted, stats, statsDataSource, productsDataSource]);
+
+    useEffect(() => {
+        if (!mounted) return;
+        const normalizedSearch = searchTerm.trim();
+        if (normalizedSearch.length < 2) return;
+
+        const timer = setTimeout(() => {
+            setRecentSearches((prev) => {
+                const next = [
+                    normalizedSearch,
+                    ...prev.filter((item) => item.toLocaleLowerCase('el-GR') !== normalizedSearch.toLocaleLowerCase('el-GR'))
+                ].slice(0, 6);
+                localStorage.setItem('kallathaki_recent_searches', JSON.stringify(next));
+                return next;
+            });
+        }, 900);
+
+        return () => clearTimeout(timer);
+    }, [mounted, searchTerm]);
 
     // Fetch Products when filters change
     useEffect(() => {
@@ -1590,6 +1670,136 @@ export default function KallathakiApp() {
 
         return { groups, totalCost: totalOptimizedCost, savings };
     }, [activeBasketProducts]);
+
+    const deferredFavorites = useDeferredValue(favorites);
+    const deferredActiveBasketProducts = useDeferredValue(activeBasketProducts);
+    const deferredSavedBaskets = useDeferredValue(savedBaskets);
+    const deferredShoppingHistory = useDeferredValue(shoppingHistory);
+    const deferredRecentSearches = useDeferredValue(recentSearches);
+
+    const currencyFormatter = useMemo(() => new Intl.NumberFormat(language === 'el' ? 'el-GR' : 'en-US', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }), [language]);
+
+    const profileDisplayName = profileName.trim() || 'Angelo';
+    const greetingHour = new Date().getHours();
+    const profileGreeting = language === 'el'
+        ? greetingHour < 12 ? 'Καλημέρα' : greetingHour < 18 ? 'Καλησπέρα' : 'Καλώς ήρθες πίσω'
+        : greetingHour < 12 ? 'Good morning' : greetingHour < 18 ? 'Welcome back' : 'Good evening';
+    const profileGreetingSubline = language === 'el'
+        ? 'Έτοιμος για τα ψώνια αυτής της εβδομάδας;'
+        : 'Ready for this week\'s shopping?';
+
+    const savingsSnapshot = useMemo(() => {
+        const now = new Date();
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const weekStart = startOfWeek(now);
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const yearStart = new Date(now.getFullYear(), 0, 1);
+
+        const sumSince = (start: Date) => deferredShoppingHistory.reduce((sum, entry) => {
+            return new Date(entry.date) >= start ? sum + entry.savings : sum;
+        }, 0);
+
+        const allSavings = deferredShoppingHistory.reduce((sum, entry) => sum + entry.savings, 0);
+        return {
+            today: sumSince(todayStart),
+            week: sumSince(weekStart),
+            month: sumSince(monthStart),
+            year: sumSince(yearStart),
+            lifetime: allSavings
+        };
+    }, [deferredShoppingHistory]);
+
+    const favoriteStoreSummary = useMemo(() => {
+        const counts = new Map<string, number>();
+        deferredShoppingHistory.forEach((entry) => {
+            entry.stores.forEach((storeId) => counts.set(storeId, (counts.get(storeId) || 0) + 1));
+        });
+
+        if (counts.size === 0) {
+            const fallbackStore = favoriteRetailers[0];
+            return fallbackStore ? RETAILER_META[fallbackStore]?.name || fallbackStore : (language === 'el' ? 'Δεν ορίστηκε' : 'Not set');
+        }
+
+        const [favoriteStore] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+        return RETAILER_META[favoriteStore]?.name || favoriteStore;
+    }, [deferredShoppingHistory, favoriteRetailers, language]);
+
+    const recentHistoryEntry = deferredShoppingHistory[0] || null;
+    const latestSavedBasket = deferredSavedBaskets[0] || null;
+
+    const motivationLine = useMemo(() => {
+        const coffees = Math.floor(savingsSnapshot.lifetime / 2.8);
+        const lunches = Math.floor(savingsSnapshot.lifetime / 24);
+
+        if (language === 'el') {
+            if (coffees >= 1 && lunches >= 1) return `Έχεις ήδη γλιτώσει αρκετά για ${coffees} καφέδες ή ${lunches} οικογενειακά γεύματα.`;
+            if (coffees >= 1) return `Έχεις ήδη γλιτώσει αρκετά για ${coffees} καφέδες.`;
+            return 'Κάθε μικρή εξοικονόμηση κάνει το επόμενο καλάθι πιο άνετο.';
+        }
+
+        if (coffees >= 1 && lunches >= 1) return `You have already saved enough for ${coffees} coffees or ${lunches} family lunches.`;
+        if (coffees >= 1) return `You have already saved enough for ${coffees} coffees.`;
+        return 'Every small saving makes the next basket lighter.';
+    }, [language, savingsSnapshot.lifetime]);
+
+    const openProfileView = (view: 'savedBaskets' | 'history' | 'supermarkets' | 'settings') => {
+        startTransition(() => {
+            setProfileSubView(view);
+        });
+    };
+
+    const handleContinueShopping = () => {
+        startTransition(() => {
+            setActiveTab('products');
+        });
+    };
+
+    const handleOptimizeBasketShortcut = () => {
+        startTransition(() => {
+            setActiveTab('favorites');
+            setFavoritesSubTab('basket');
+            setShowOptimizerResults(true);
+        });
+    };
+
+    const handleRepeatWeeklyBasket = () => {
+        if (!latestSavedBasket) {
+            setToastMessage(language === 'el'
+                ? 'Αποθηκεύστε πρώτα ένα καλάθι για να το επαναλαμβάνετε γρήγορα.'
+                : 'Save a basket first so you can repeat it quickly.');
+            return;
+        }
+
+        loadBasket(latestSavedBasket);
+        setToastMessage(language === 'el'
+            ? `Το καλάθι "${latestSavedBasket.name}" είναι έτοιμο ξανά.`
+            : `"${latestSavedBasket.name}" is ready again.`);
+
+        startTransition(() => {
+            setActiveTab('favorites');
+            setFavoritesSubTab('basket');
+        });
+    };
+
+    const handleRecentSearchClick = (query: string) => {
+        setSearchTerm(query);
+        setCurrentPage(1);
+        startTransition(() => {
+            setActiveTab('products');
+        });
+    };
+
+    const handleHelpPlaceholder = (label: string) => {
+        setToastMessage(language === 'el'
+            ? `${label}: έρχεται σύντομα.`
+            : `${label}: coming soon.`);
+    };
 
     return (
         <div className="min-h-screen bg-background text-foreground font-sans transition-colors duration-300">
@@ -2541,6 +2751,24 @@ export default function KallathakiApp() {
                                     {profileSubView === 'settings' && (
                                         <div className="space-y-6">
                                             <div className="bg-card-bg border border-border-custom rounded-3xl p-5 shadow-sm divide-y divide-border-custom">
+                                                <div className="py-4 space-y-3">
+                                                    <div>
+                                                        <div className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                                                            {language === 'el' ? 'Όνομα προφίλ' : 'Profile Name'}
+                                                        </div>
+                                                        <div className="text-xs text-slate-500 mt-1">
+                                                            {language === 'el' ? 'Χρησιμοποιείται μόνο για το προσωπικό καλωσόρισμα στη συσκευή σου.' : 'Used only for the personal greeting on this device.'}
+                                                        </div>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        value={profileName}
+                                                        onChange={(e) => saveProfileName(e.target.value)}
+                                                        placeholder={language === 'el' ? 'π.χ. Angelo' : 'e.g. Angelo'}
+                                                        className="w-full px-4 py-3 text-sm bg-background border border-border-custom rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-foreground"
+                                                    />
+                                                </div>
+
                                                 {/* Language Setting */}
                                                 <div className="py-4 flex items-center justify-between gap-4">
                                                     <div>
@@ -2604,51 +2832,496 @@ export default function KallathakiApp() {
                                     )}
                                 </div>
                             ) : (
-                                <div className="space-y-8 pb-12 animate-fadeIn">
-                                    <section className="bg-card-bg border border-border-custom rounded-3xl p-6 sm:p-8 shadow-sm">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-                                                <UserCircle className="w-9 h-9" />
+                                <div className="space-y-7 pb-12 animate-fadeIn">
+                                    <section className="relative overflow-hidden bg-card-bg border border-border-custom rounded-[2rem] p-6 sm:p-8 shadow-sm">
+                                        <div className="absolute inset-x-0 top-0 h-32 bg-[radial-gradient(circle_at_top_left,_rgba(99,102,241,0.16),_transparent_55%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_45%)] pointer-events-none" />
+                                        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-[4.5rem] h-[4.5rem] rounded-[1.75rem] bg-gradient-to-br from-indigo-500/15 via-white to-emerald-500/10 border border-white/40 text-indigo-700 dark:text-indigo-300 flex items-center justify-center shadow-sm">
+                                                    <span className="text-2xl font-black">{profileDisplayName.slice(0, 1).toUpperCase()}</span>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-indigo-500">
+                                                        {language === 'el' ? 'Το Kallathaki σου' : 'Your Kallathaki'}
+                                                    </p>
+                                                    <h2 className="text-2xl sm:text-3xl font-black text-slate-850 dark:text-slate-100">
+                                                        {profileGreeting}, {profileDisplayName}
+                                                    </h2>
+                                                    <p className="text-sm text-slate-500">{profileGreetingSubline}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <h2 className="text-2xl font-black text-slate-850 dark:text-slate-100">{t('profileTitle')}</h2>
-                                                <p className="text-sm text-slate-500 mt-1">{t('profileText')}</p>
+
+                                            <div className="min-w-[220px] rounded-[1.75rem] border border-emerald-500/15 bg-white/70 dark:bg-slate-900/40 backdrop-blur p-4 shadow-sm">
+                                                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-600 dark:text-emerald-400">
+                                                    {language === 'el' ? 'Εξοικονόμηση αυτής της εβδομάδας' : 'This Week\'s Savings'}
+                                                </p>
+                                                <div className="mt-2 text-3xl font-black text-slate-850 dark:text-slate-100">
+                                                    {currencyFormatter.format(savingsSnapshot.week)}
+                                                </div>
+                                                <p className="mt-2 text-xs text-slate-500">
+                                                    {language === 'el' ? 'Ωραία δουλειά. Το καλάθι σου γίνεται όλο και πιο έξυπνο.' : 'Nice work. Your basket is getting smarter every week.'}
+                                                </p>
                                             </div>
                                         </div>
                                     </section>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-                                        {[
-                                            { title: t('favoriteProducts'), value: favorites.length, text: t('favoriteProductsText'), icon: <Heart className="w-5 h-5" /> },
-                                            { title: t('activeBasketTitle'), value: activeBasketProducts.length, text: t('activeBasketText'), icon: <ShoppingBasket className="w-5 h-5" /> },
-                                            { title: t('estimatedSavings'), value: `€${basketOptimizer.bestPossibleSaving.toFixed(2)}`, text: t('estimatedSavingsText'), icon: <PiggyBank className="w-5 h-5" /> }
-                                        ].map((item) => (
-                                            <div key={item.title} className="bg-card-bg border border-border-custom rounded-3xl p-5 shadow-sm">
-                                                <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center mb-4">{item.icon}</div>
-                                                <div className="text-sm font-black text-slate-850 dark:text-slate-100">{item.title}</div>
-                                                <div className="text-2xl font-black text-emerald-600 mt-1">{item.value}</div>
-                                                <p className="text-xs text-slate-500 mt-2">{item.text}</p>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <section className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-sm font-black uppercase tracking-[0.18em] text-slate-500">
+                                                {language === 'el' ? 'Γρήγορα Στατιστικά' : 'Quick Stats'}
+                                            </h3>
+                                            <span className="text-xs text-slate-400">
+                                                {language === 'el' ? 'Μια ματιά πριν ξεκινήσεις' : 'A quick glance before you shop'}
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+                                            {[
+                                                {
+                                                    label: language === 'el' ? 'Αυτή την εβδομάδα' : 'This Week',
+                                                    value: currencyFormatter.format(savingsSnapshot.week),
+                                                    helper: language === 'el' ? 'σε εξοικονόμηση' : 'saved'
+                                                },
+                                                {
+                                                    label: language === 'el' ? 'Αυτόν τον μήνα' : 'This Month',
+                                                    value: currencyFormatter.format(savingsSnapshot.month),
+                                                    helper: language === 'el' ? 'σε εξοικονόμηση' : 'saved'
+                                                },
+                                                {
+                                                    label: language === 'el' ? 'Βελτιστοποιημένα καλάθια' : 'Baskets Optimized',
+                                                    value: `${deferredShoppingHistory.length}`,
+                                                    helper: language === 'el' ? 'διαδρομές ολοκληρώθηκαν' : 'shopping trips completed'
+                                                },
+                                                {
+                                                    label: language === 'el' ? 'Αγαπημένο κατάστημα' : 'Favorite Store',
+                                                    value: favoriteStoreSummary,
+                                                    helper: language === 'el' ? 'με βάση το ιστορικό σου' : 'based on your history'
+                                                }
+                                            ].map((item) => (
+                                                <div key={item.label} className="bg-card-bg border border-border-custom rounded-[1.6rem] p-4 shadow-sm">
+                                                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{item.label}</div>
+                                                    <div className="mt-3 text-xl font-black text-slate-850 dark:text-slate-100">{item.value}</div>
+                                                    <div className="mt-1 text-xs text-slate-500">{item.helper}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </section>
 
-                                    <div className="bg-card-bg border border-border-custom rounded-3xl p-5 shadow-sm divide-y divide-border-custom">
-                                        {[
-                                            { label: t('savedBaskets'), view: 'savedBaskets' as const },
-                                            { label: t('shoppingHistory'), view: 'history' as const },
-                                            { label: t('favoriteSupermarkets'), view: 'supermarkets' as const },
-                                            { label: t('settings'), view: 'settings' as const }
-                                        ].map((opt) => (
-                                            <button 
-                                                key={opt.view} 
-                                                onClick={() => setProfileSubView(opt.view)}
-                                                className="w-full min-h-14 flex items-center justify-between text-left text-sm font-bold text-slate-750 dark:text-slate-200 hover:text-indigo-500 transition cursor-pointer"
-                                            >
-                                                <span>{opt.label}</span>
-                                                <ChevronRight className="w-4 h-4 text-slate-400" />
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <section className="bg-card-bg border border-border-custom rounded-[1.8rem] p-5 shadow-sm space-y-4">
+                                        <div className="flex items-center justify-between gap-4">
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">
+                                                    {language === 'el' ? 'Οι Αγορές Μου' : 'My Shopping'}
+                                                </h3>
+                                                <p className="text-sm text-slate-500">
+                                                    {language === 'el' ? 'Το προσωπικό σου shopping memory για να συνεχίζεις γρήγορα.' : 'Your shopping memory so you can jump back in fast.'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                            {[
+                                                {
+                                                    title: language === 'el' ? 'Εβδομαδιαίο καλάθι' : 'Weekly Basket',
+                                                    value: `${deferredActiveBasketProducts.length}`,
+                                                    helper: language === 'el' ? 'προϊόντα έτοιμα για βελτιστοποίηση' : 'items ready to optimize',
+                                                    icon: <ShoppingBasket className="w-5 h-5" />,
+                                                    onClick: () => {
+                                                        startTransition(() => {
+                                                            setActiveTab('favorites');
+                                                            setFavoritesSubTab('basket');
+                                                        });
+                                                    }
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Αποθηκευμένα καλάθια' : 'Saved Baskets',
+                                                    value: `${deferredSavedBaskets.length}`,
+                                                    helper: latestSavedBasket
+                                                        ? `${latestSavedBasket.name}`
+                                                        : (language === 'el' ? 'Αποθήκευσε το πρώτο σου καλάθι.' : 'Save your first basket.'),
+                                                    icon: <RefreshCw className="w-5 h-5" />,
+                                                    onClick: () => openProfileView('savedBaskets')
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Ιστορικό αγορών' : 'Shopping History',
+                                                    value: `${deferredShoppingHistory.length}`,
+                                                    helper: recentHistoryEntry
+                                                        ? `${language === 'el' ? 'Τελευταία εξοικονόμηση' : 'Last saved'} ${currencyFormatter.format(recentHistoryEntry.savings)}`
+                                                        : (language === 'el' ? 'Το ιστορικό σου θα εμφανιστεί εδώ.' : 'Your shopping history will appear here.'),
+                                                    icon: <Clock3 className="w-5 h-5" />,
+                                                    onClick: () => openProfileView('history')
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Αγαπημένα προϊόντα' : 'Favorite Products',
+                                                    value: `${deferredFavorites.length}`,
+                                                    helper: language === 'el' ? 'προϊόντα που κρατάς κοντά σου' : 'products you keep close',
+                                                    icon: <Heart className="w-5 h-5" />,
+                                                    onClick: () => {
+                                                        startTransition(() => {
+                                                            setActiveTab('favorites');
+                                                            setFavoritesSubTab('pantry');
+                                                        });
+                                                    }
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Αγαπημένα σούπερ μάρκετ' : 'Favorite Supermarkets',
+                                                    value: `${favoriteRetailers.length}`,
+                                                    helper: favoriteRetailers.length === 0
+                                                        ? (language === 'el' ? 'Επίλεξε αλυσίδες για προσωποποίηση.' : 'Choose stores to personalize results.')
+                                                        : favoriteRetailers.map((retailerId) => RETAILER_META[retailerId]?.name || retailerId).slice(0, 2).join(', '),
+                                                    icon: <Store className="w-5 h-5" />,
+                                                    onClick: () => openProfileView('supermarkets')
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Πρόσφατες αναζητήσεις' : 'Recent Searches',
+                                                    value: `${deferredRecentSearches.length}`,
+                                                    helper: deferredRecentSearches[0] || (language === 'el' ? 'Οι αναζητήσεις σου θα εμφανιστούν εδώ.' : 'Your searches will appear here.'),
+                                                    icon: <Search className="w-5 h-5" />,
+                                                    onClick: handleContinueShopping
+                                                }
+                                            ].map((item) => (
+                                                <button
+                                                    key={item.title}
+                                                    onClick={item.onClick}
+                                                    className="text-left bg-background/70 border border-border-custom rounded-[1.4rem] p-4 hover:border-indigo-500/30 hover:bg-indigo-500/[0.03] transition cursor-pointer"
+                                                >
+                                                    <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center mb-3">
+                                                        {item.icon}
+                                                    </div>
+                                                    <div className="text-sm font-black text-slate-850 dark:text-slate-100">{item.title}</div>
+                                                    <div className="mt-2 text-2xl font-black text-slate-850 dark:text-slate-100">{item.value}</div>
+                                                    <p className="mt-1 text-xs text-slate-500 line-clamp-2">{item.helper}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                        {deferredRecentSearches.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 pt-1">
+                                                {deferredRecentSearches.map((query) => (
+                                                    <button
+                                                        key={query}
+                                                        onClick={() => handleRecentSearchClick(query)}
+                                                        className="px-3 py-2 rounded-full bg-input-custom border border-border-custom text-xs font-bold text-slate-650 dark:text-slate-300 hover:border-indigo-500/30 hover:text-indigo-500 transition cursor-pointer"
+                                                    >
+                                                        {query}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </section>
+
+                                    <section className="bg-card-bg border border-border-custom rounded-[1.8rem] p-5 shadow-sm space-y-4">
+                                        <div>
+                                            <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">
+                                                {language === 'el' ? 'Έξυπνες Συντομεύσεις' : 'Smart Shortcuts'}
+                                            </h3>
+                                            <p className="text-sm text-slate-500">
+                                                {language === 'el' ? 'Οι πιο χρήσιμες κινήσεις σου, μπροστά σου.' : 'The actions you use most, right where you need them.'}
+                                            </p>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
+                                            {[
+                                                {
+                                                    title: language === 'el' ? 'Συνέχισε τα ψώνια' : 'Continue Shopping',
+                                                    text: language === 'el' ? 'Γύρνα άμεσα στην αναζήτηση προϊόντων.' : 'Jump straight back to product search.',
+                                                    icon: <ShoppingBag className="w-5 h-5" />,
+                                                    onClick: handleContinueShopping
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Βελτιστοποίησε το τελευταίο καλάθι' : 'Optimize Last Basket',
+                                                    text: language === 'el' ? 'Άνοιξε το ενεργό καλάθι και δες το καλύτερο πλάνο.' : 'Open your active basket and see the best plan.',
+                                                    icon: <Trophy className="w-5 h-5" />,
+                                                    onClick: handleOptimizeBasketShortcut
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Επανάλαβε το εβδομαδιαίο καλάθι' : 'Repeat Weekly Basket',
+                                                    text: language === 'el' ? 'Φόρτωσε ξανά το πιο πρόσφατο αποθηκευμένο καλάθι.' : 'Load your latest saved basket again.',
+                                                    icon: <RefreshCw className="w-5 h-5" />,
+                                                    onClick: handleRepeatWeeklyBasket
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Δες προσφορές' : 'Browse Offers',
+                                                    text: language === 'el' ? 'Μπες κατευθείαν στις καλύτερες προσφορές.' : 'Go straight to the best offers.',
+                                                    icon: <Percent className="w-5 h-5" />,
+                                                    onClick: () => startTransition(() => setActiveTab('offers'))
+                                                },
+                                                {
+                                                    title: language === 'el' ? 'Νέο καλάθι' : 'Create New Basket',
+                                                    text: language === 'el' ? 'Καθάρισε την πορεία και ξεκίνα νέο κύκλο αγορών.' : 'Reset the flow and start a new shopping run.',
+                                                    icon: <Sparkles className="w-5 h-5" />,
+                                                    onClick: resetFilters
+                                                }
+                                            ].map((shortcut) => (
+                                                <button
+                                                    key={shortcut.title}
+                                                    onClick={shortcut.onClick}
+                                                    className="text-left bg-background/70 border border-border-custom rounded-[1.4rem] p-4 hover:border-emerald-500/30 hover:bg-emerald-500/[0.03] transition cursor-pointer"
+                                                >
+                                                    <div className="w-10 h-10 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mb-3">
+                                                        {shortcut.icon}
+                                                    </div>
+                                                    <div className="text-sm font-black text-slate-850 dark:text-slate-100">{shortcut.title}</div>
+                                                    <p className="mt-2 text-xs text-slate-500">{shortcut.text}</p>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </section>
+
+                                    <section className="grid grid-cols-1 xl:grid-cols-[1.15fr_0.85fr] gap-5">
+                                        <div className="bg-card-bg border border-border-custom rounded-[1.8rem] p-5 shadow-sm space-y-4">
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">
+                                                    {language === 'el' ? 'Εξοικονόμηση' : 'Savings'}
+                                                </h3>
+                                                <p className="text-sm text-slate-500">
+                                                    {language === 'el' ? 'Κράτα επαφή με το πόσα κερδίζεις σε κάθε χρονικό ορίζοντα.' : 'Stay close to what you are saving across every timeframe.'}
+                                                </p>
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                                                {[
+                                                    { label: language === 'el' ? 'Σήμερα' : 'Today', value: savingsSnapshot.today },
+                                                    { label: language === 'el' ? 'Αυτή την εβδομάδα' : 'This Week', value: savingsSnapshot.week },
+                                                    { label: language === 'el' ? 'Αυτόν τον μήνα' : 'This Month', value: savingsSnapshot.month },
+                                                    { label: language === 'el' ? 'Φέτος' : 'This Year', value: savingsSnapshot.year },
+                                                    { label: language === 'el' ? 'Συνολικά' : 'Lifetime', value: savingsSnapshot.lifetime }
+                                                ].map((item) => (
+                                                    <div key={item.label} className="rounded-[1.3rem] bg-background/70 border border-border-custom p-4">
+                                                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{item.label}</div>
+                                                        <div className="mt-3 text-lg font-black text-emerald-600 dark:text-emerald-400">{currencyFormatter.format(item.value)}</div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <div className="rounded-[1.4rem] border border-emerald-500/15 bg-emerald-500/[0.05] p-4">
+                                                <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                    {language === 'el' ? 'Κράτα το momentum.' : 'Keep the momentum going.'}
+                                                </div>
+                                                <p className="mt-2 text-sm text-slate-500">{motivationLine}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-5">
+                                            <section className="bg-card-bg border border-border-custom rounded-[1.8rem] p-5 shadow-sm space-y-4">
+                                                <div>
+                                                    <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">
+                                                        {language === 'el' ? 'Προτιμήσεις Αγορών' : 'Preferences'}
+                                                    </h3>
+                                                    <p className="text-sm text-slate-500">
+                                                        {language === 'el' ? 'Μόνο ρυθμίσεις που αλλάζουν τον τρόπο που ψωνίζεις.' : 'Only settings that shape how you shop.'}
+                                                    </p>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <button
+                                                        onClick={() => openProfileView('supermarkets')}
+                                                        className="w-full flex items-center justify-between rounded-[1.3rem] border border-border-custom bg-background/70 px-4 py-3 text-left hover:border-indigo-500/30 transition cursor-pointer"
+                                                    >
+                                                        <div>
+                                                            <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                                {language === 'el' ? 'Προτιμώμενα σούπερ μάρκετ' : 'Preferred Supermarkets'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                                {favoriteRetailers.length > 0
+                                                                    ? favoriteRetailers.map((retailerId) => RETAILER_META[retailerId]?.name || retailerId).join(', ')
+                                                                    : (language === 'el' ? 'Επίλεξε αλυσίδες για πιο προσωπικές προτάσεις.' : 'Choose stores for more personal recommendations.')}
+                                                            </div>
+                                                        </div>
+                                                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                                                    </button>
+
+                                                    <div className="rounded-[1.3rem] border border-border-custom bg-background/70 p-4 flex items-center justify-between gap-4">
+                                                        <div>
+                                                            <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                                {language === 'el' ? 'Γλώσσα' : 'Preferred Language'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                                {language === 'el' ? 'Ελληνικά' : 'English'}
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={toggleLanguage} className="px-3 py-2 rounded-xl bg-input-custom border border-border-custom text-xs font-bold text-indigo-600 dark:text-indigo-400 cursor-pointer">
+                                                            {language === 'el' ? 'English' : 'Ελληνικά'}
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="rounded-[1.3rem] border border-border-custom bg-background/70 p-4 flex items-center justify-between gap-4">
+                                                        <div>
+                                                            <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                                {language === 'el' ? 'Dark Mode' : 'Dark Mode'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                                {theme === 'dark'
+                                                                    ? (language === 'el' ? 'Άνετη προβολή για βραδινό planning.' : 'Comfortable viewing for evening planning.')
+                                                                    : (language === 'el' ? 'Φωτεινή προβολή για γρήγορες συγκρίσεις.' : 'Bright view for fast comparisons.')}
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={toggleTheme} className="px-3 py-2 rounded-xl bg-input-custom border border-border-custom text-xs font-bold text-indigo-600 dark:text-indigo-400 cursor-pointer">
+                                                            {theme === 'dark' ? (language === 'el' ? 'Σκοτεινό' : 'Dark') : (language === 'el' ? 'Φωτεινό' : 'Light')}
+                                                        </button>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={toggleNotifications}
+                                                        className="w-full rounded-[1.3rem] border border-border-custom bg-background/70 p-4 flex items-center justify-between gap-4 text-left cursor-pointer"
+                                                    >
+                                                        <div>
+                                                            <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                                {language === 'el' ? 'Ειδοποιήσεις' : 'Notifications'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                                {notificationsEnabled
+                                                                    ? (language === 'el' ? 'Θα ειδοποιείσαι όταν έχει νόημα να επιστρέψεις.' : 'You will get a nudge when it is worth coming back.')
+                                                                    : (language === 'el' ? 'Άφησέ το κλειστό αν προτιμάς ησυχία.' : 'Keep it off if you prefer a quieter experience.')}
+                                                            </div>
+                                                        </div>
+                                                        <div className={`w-11 h-6 rounded-full transition ${notificationsEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                                                            <div className={`w-5 h-5 mt-0.5 bg-white rounded-full transition ${notificationsEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                                        </div>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={togglePriceAlerts}
+                                                        className="w-full rounded-[1.3rem] border border-border-custom bg-background/70 p-4 flex items-center justify-between gap-4 text-left cursor-pointer"
+                                                    >
+                                                        <div>
+                                                            <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                                {language === 'el' ? 'Προτιμήσεις price alerts' : 'Price Alert Preferences'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                                {priceAlertsEnabled
+                                                                    ? (language === 'el' ? 'Θα δίνουμε προτεραιότητα σε προσφορές σχετικές με το καλάθι σου.' : 'We will prioritize offer nudges related to your basket.')
+                                                                    : (language === 'el' ? 'Καμία πίεση, μόνο χειροκίνητος έλεγχος.' : 'No pressure, manual checking only.')}
+                                                            </div>
+                                                        </div>
+                                                        <div className={`w-11 h-6 rounded-full transition ${priceAlertsEnabled ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-700'}`}>
+                                                            <div className={`w-5 h-5 mt-0.5 bg-white rounded-full transition ${priceAlertsEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                                        </div>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => openProfileView('settings')}
+                                                        className="w-full flex items-center justify-between rounded-[1.3rem] border border-dashed border-border-custom bg-background/50 px-4 py-3 text-left hover:border-slate-400 transition cursor-pointer"
+                                                    >
+                                                        <div>
+                                                            <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                                {language === 'el' ? 'Advanced' : 'Advanced'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                                {language === 'el' ? 'Reset δεδομένων και πιο τεχνικές επιλογές.' : 'Reset data and more technical controls.'}
+                                                            </div>
+                                                        </div>
+                                                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                                                    </button>
+                                                </div>
+                                            </section>
+
+                                            <section className="bg-card-bg border border-border-custom rounded-[1.8rem] p-5 shadow-sm space-y-4">
+                                                <div>
+                                                    <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">
+                                                        {language === 'el' ? 'Λογαριασμός' : 'Account'}
+                                                    </h3>
+                                                    <p className="text-sm text-slate-500">
+                                                        {language === 'el' ? 'Χωρίς πίεση. Το Kallathaki δουλεύει και ως guest.' : 'No pressure. Kallathaki works fine in guest mode too.'}
+                                                    </p>
+                                                </div>
+                                                <div className="rounded-[1.4rem] border border-indigo-500/15 bg-indigo-500/[0.05] p-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
+                                                            <UserCircle className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                                {language === 'el' ? 'Guest mode ενεργό' : 'Guest mode active'}
+                                                            </div>
+                                                            <div className="text-xs text-slate-500 mt-1">
+                                                                {language === 'el' ? 'Όταν προστεθεί account sync, θα μπορείς να σώσεις καλάθια, αγαπημένα και alerts σε όλες τις συσκευές.' : 'When account sync arrives, you will be able to keep baskets, favorites, and alerts across devices.'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="mt-4 flex flex-wrap gap-2">
+                                                        {(language === 'el'
+                                                            ? ['Αποθήκευση καλαθιών', 'Συγχρονισμός συσκευών', 'Price alerts', 'Μνήμη αγαπημένων']
+                                                            : ['Save baskets', 'Sync devices', 'Price alerts', 'Remember favorites']
+                                                        ).map((benefit) => (
+                                                            <span key={benefit} className="px-3 py-2 rounded-full bg-white/70 dark:bg-slate-900/40 border border-border-custom text-xs font-bold text-slate-650 dark:text-slate-300">
+                                                                {benefit}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </section>
+                                        </div>
+                                    </section>
+
+                                    <section className="grid grid-cols-1 xl:grid-cols-[1fr_0.95fr] gap-5">
+                                        <div className="bg-card-bg border border-border-custom rounded-[1.8rem] p-5 shadow-sm space-y-4">
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">
+                                                    {language === 'el' ? 'Βοήθεια' : 'Help'}
+                                                </h3>
+                                                <p className="text-sm text-slate-500">
+                                                    {language === 'el' ? 'Ό,τι χρειάζεσαι για να συνεχίσεις με σιγουριά.' : 'Everything you need to keep shopping with confidence.'}
+                                                </p>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <Link href="/guide" className="rounded-[1.3rem] border border-border-custom bg-background/70 p-4 hover:border-indigo-500/30 transition">
+                                                    <div className="text-sm font-black text-slate-850 dark:text-slate-100">
+                                                        {language === 'el' ? 'Κέντρο βοήθειας' : 'Help Center'}
+                                                    </div>
+                                                    <div className="text-xs text-slate-500 mt-1">
+                                                        {language === 'el' ? 'Οδηγός για αναζήτηση, καλάθι και βελτιστοποίηση.' : 'Guide for search, basket, and optimization.'}
+                                                    </div>
+                                                </Link>
+                                                {[
+                                                    language === 'el' ? 'Επικοινωνία υποστήριξης' : 'Contact Support',
+                                                    language === 'el' ? 'Αναφορά λανθασμένης τιμής' : 'Report Incorrect Price',
+                                                    language === 'el' ? 'Πρότεινε feature' : 'Suggest Feature',
+                                                    language === 'el' ? 'Σχετικά με το Kallathaki' : 'About Kallathaki',
+                                                    language === 'el' ? 'Privacy Policy' : 'Privacy Policy',
+                                                    language === 'el' ? 'Terms' : 'Terms'
+                                                ].map((label) => (
+                                                    <button
+                                                        key={label}
+                                                        onClick={() => handleHelpPlaceholder(label)}
+                                                        className="rounded-[1.3rem] border border-border-custom bg-background/70 p-4 text-left hover:border-indigo-500/30 transition cursor-pointer"
+                                                    >
+                                                        <div className="text-sm font-black text-slate-850 dark:text-slate-100">{label}</div>
+                                                        <div className="text-xs text-slate-500 mt-1">
+                                                            {language === 'el' ? 'Θα συνδεθεί με το κατάλληλο flow σε επόμενο βήμα.' : 'This will connect to the proper flow in a follow-up step.'}
+                                                        </div>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-card-bg border border-border-custom rounded-[1.8rem] p-5 shadow-sm space-y-4">
+                                            <div>
+                                                <h3 className="text-lg font-black text-slate-850 dark:text-slate-100">
+                                                    {language === 'el' ? 'Έρχεται σύντομα' : 'Coming Soon'}
+                                                </h3>
+                                                <p className="text-sm text-slate-500">
+                                                    {language === 'el' ? 'Χώρος για πιο έξυπνα εργαλεία χωρίς να βαραίνει η σημερινή εμπειρία.' : 'Space for smarter tools without weighing down today\'s experience.'}
+                                                </p>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                {(language === 'el'
+                                                    ? [
+                                                        'Shopping Intelligence',
+                                                        'Weekly Insights',
+                                                        'Price Alerts',
+                                                        'AI Recommendations'
+                                                    ]
+                                                    : [
+                                                        'Shopping Intelligence',
+                                                        'Weekly Insights',
+                                                        'Price Alerts',
+                                                        'AI Recommendations'
+                                                    ]
+                                                ).map((item) => (
+                                                    <div key={item} className="rounded-[1.3rem] border border-dashed border-border-custom bg-background/40 p-4 opacity-75">
+                                                        <div className="text-sm font-black text-slate-850 dark:text-slate-100">{item}</div>
+                                                        <div className="text-xs text-slate-500 mt-1">
+                                                            {language === 'el' ? 'Placeholder για μελλοντική αναβάθμιση.' : 'Reserved placeholder for a future upgrade.'}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </section>
                                 </div>
                             )
                         ) : (
