@@ -1,10 +1,11 @@
-import { writeFile } from 'node:fs/promises';
+import { writeFile, readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const GOV_API_URL = process.env.GOV_API_URL || 'https://api.posokanei.gov.gr';
 const PAGE_SIZE = 100;
 const FETCH_CONCURRENCY = 8;
 const ROOT = process.cwd();
+const CATEGORIES_PATH = path.join(ROOT, 'src/app/api/[...path]/categories-fallback.json');
 const PRODUCTS_PATH = path.join(ROOT, 'src/app/api/[...path]/products-fallback.json');
 const STATS_PATH = path.join(ROOT, 'src/app/api/[...path]/stats-fallback.json');
 
@@ -19,27 +20,27 @@ function upstreamHeaders() {
   };
 }
 
-async function fetchSearchPage(page) {
+async function fetchSearchPage(page, categoryId) {
   const response = await fetch(`${GOV_API_URL}/products/search`, {
     method: 'POST',
     headers: upstreamHeaders(),
-    body: JSON.stringify({ page, page_size: PAGE_SIZE })
+    body: JSON.stringify({ page, page_size: PAGE_SIZE, category_id: categoryId })
   });
 
   if (!response.ok) {
-    throw new Error(`Gov API products/search failed for page ${page}: ${response.status} ${response.statusText}`);
+    throw new Error(`Gov API products/search failed for page ${page} in category ${categoryId}: ${response.status} ${response.statusText}`);
   }
 
   return response.json();
 }
 
-async function fetchRemainingPages(totalPages) {
+async function fetchRemainingPages(totalPages, categoryId) {
   const pages = [];
   const pending = Array.from({ length: Math.max(0, totalPages - 1) }, (_, index) => index + 2);
 
   while (pending.length > 0) {
     const batch = pending.splice(0, FETCH_CONCURRENCY);
-    const responses = await Promise.all(batch.map((page) => fetchSearchPage(page)));
+    const responses = await Promise.all(batch.map((page) => fetchSearchPage(page, categoryId)));
     pages.push(...responses);
   }
 
@@ -97,20 +98,31 @@ function buildStatsFallback(products, generatedAt) {
 async function main() {
   console.log('Refreshing products fallback snapshot...');
 
-  const firstPage = await fetchSearchPage(1);
-  const totalPages = Math.max(1, Number(firstPage.total_pages) || 1);
-  const remainingPages = await fetchRemainingPages(totalPages);
-  const products = dedupeProducts([firstPage, ...remainingPages].flatMap((page) => page.products || []));
+  const categoriesContent = await readFile(CATEGORIES_PATH, 'utf8');
+  const categoriesData = JSON.parse(categoriesContent);
+  const rootCategoryIds = categoriesData.tree.map((cat) => cat.category_id);
+
+  console.log(`Found ${rootCategoryIds.length} root categories to query.`);
+
+  const allPages = [];
+  for (const catId of rootCategoryIds) {
+    console.log(`Querying category ${catId}...`);
+    const firstPage = await fetchSearchPage(1, catId);
+    const totalPages = Math.max(1, Number(firstPage.total_pages) || 1);
+    console.log(`Category ${catId} has ${firstPage.total || 0} products across ${totalPages} pages.`);
+    const remainingPages = await fetchRemainingPages(totalPages, catId);
+    allPages.push(firstPage, ...remainingPages);
+  }
+
+  const products = dedupeProducts(allPages.flatMap((page) => page.products || []));
   const generatedAt = new Date().toISOString();
   const productUpdatedAtMax = latestProductTimestamp(products);
 
   const snapshot = {
     generated_at: generatedAt,
     source: `${GOV_API_URL}/products/search`,
-    strategy: 'full catalog pagination',
-    total: Number(firstPage.total) || products.length,
-    total_pages: totalPages,
-    page_size: PAGE_SIZE,
+    strategy: 'full catalog pagination via root categories',
+    total: products.length,
     product_updated_at_max: productUpdatedAtMax,
     products
   };
