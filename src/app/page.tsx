@@ -10,17 +10,12 @@ import {
     Check, Trash2
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { proxyGovAssetUrl, retailerLogoUrl } from '../lib/gov-assets';
 
 const BarcodeScannerModal = dynamic(() => import('../components/BarcodeScannerModal'), { ssr: false });
 const EShopHelperModal = dynamic(() => import('../components/EShopHelperModal'), { ssr: false });
 const FavoritesView = dynamic(() => import('../components/FavoritesView'), { ssr: false });
 
-const GOV_API_ORIGIN = 'https://api.posokanei.gov.gr';
-const proxyGovAssetUrl = (url?: string) => {
-    if (!url) return '';
-    return url.startsWith(GOV_API_ORIGIN) ? url.replace(GOV_API_ORIGIN, '/api') : url;
-};
-const retailerLogoUrl = (retailerId: string) => `/api/images/retailer/${retailerId}`;
 const formatGreekDate = (date?: string) => {
     if (!date) return '';
     return new Date(date).toLocaleDateString('el-GR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -2471,7 +2466,7 @@ export default function KallathakiApp() {
                                                                     <span className="text-xs font-bold text-slate-400">{t('storesVisited')}:</span>
                                                                     {entry.stores.map(storeId => (
                                                                         <span key={storeId} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-input-custom text-[10px] font-bold text-slate-650 dark:text-slate-350">
-                                                                            <img src={`https://api.posokanei.gov.gr/images/retailer/${storeId}`} alt="" className="w-4 h-4 rounded-full object-cover" />
+                                                                            <img src={retailerLogoUrl(storeId)} alt="" className="w-4 h-4 rounded-full object-cover" />
                                                                             {RETAILER_META[storeId]?.name || storeId}
                                                                         </span>
                                                                     ))}
@@ -2482,7 +2477,7 @@ export default function KallathakiApp() {
                                                                         {entry.items.map((item, idx) => (
                                                                             <div key={idx} className="flex justify-between items-center py-2 text-xs">
                                                                                 <div className="flex items-center gap-2">
-                                                                                    <img src={`https://api.posokanei.gov.gr/images/retailer/${item.retailer}`} alt="" className="w-4 h-4 rounded-full object-cover" />
+                                                                                    <img src={retailerLogoUrl(item.retailer)} alt="" className="w-4 h-4 rounded-full object-cover" />
                                                                                     <span className="text-slate-650 dark:text-slate-300 font-medium">{item.name}</span>
                                                                                 </div>
                                                                                 <strong className="text-slate-800 dark:text-slate-100">€{item.price.toFixed(2)}</strong>
@@ -2521,7 +2516,7 @@ export default function KallathakiApp() {
                                                         >
                                                             <div className="flex items-center gap-3">
                                                                 <img 
-                                                                    src={`https://api.posokanei.gov.gr/images/retailer/${retailerId}`} 
+                                                                    src={retailerLogoUrl(retailerId)} 
                                                                     alt="" 
                                                                     className="w-10 h-10 rounded-full object-cover border border-border-custom"
                                                                 />

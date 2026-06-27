@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { X, ExternalLink, Check, ShoppingBag, Info, ArrowRight } from 'lucide-react';
+import { proxyGovAssetUrl } from '../lib/gov-assets';
 
 interface RetailerPrice {
     retailer: string;
@@ -251,7 +252,7 @@ export default function EShopHelperModal({ isOpen, onClose, products, retailer }
                                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
                                                 {p.image_url ? (
                                                     <img 
-                                                        src={p.image_url} 
+                                                        src={proxyGovAssetUrl(p.image_url)} 
                                                         alt={p.name} 
                                                         className="w-10 h-10 object-contain bg-white rounded-lg p-0.5 border border-slate-100 flex-shrink-0"
                                                         onError={(e) => {
