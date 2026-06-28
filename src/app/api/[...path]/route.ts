@@ -17,6 +17,8 @@ type ProductSearchPayload = {
 };
 
 type FallbackProduct = {
+  id?: string;
+  barcode?: string;
   name?: string;
   title?: string;
   brand?: string;
@@ -108,14 +110,17 @@ function upstreamHeaders(contentType = false) {
 }
 
 async function proxyImage(url: string, targetPath: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
+
   try {
     const response = await fetch(url, {
       headers: {
         ...upstreamHeaders(),
         'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
       },
-      cache: 'force-cache',
-      next: { revalidate: 60 * 60 * 24 }
+      cache: 'no-store',
+      signal: controller.signal
     });
 
     if (!response.ok) {
@@ -134,6 +139,8 @@ async function proxyImage(url: string, targetPath: string) {
   } catch (error) {
     console.error('[Gov image request error]', { targetPath, url, error });
     return new NextResponse(null, { status: 502 });
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -184,9 +191,29 @@ async function fetchUpstream(url: string, init: RequestInit, targetPath: string)
 
 function staticFallbackForGet(targetPath: string) {
   if (targetPath === 'meta/categories/tree') return categoriesFallback;
-  if (targetPath === 'meta/stats') return withCatalogFreshness(statsFallback);
+  if (targetPath === 'meta/stats') return withFallbackCatalogFreshness(statsFallback);
+  if (targetPath.startsWith('products/')) {
+    return staticProductFallback(targetPath);
+  }
 
   return null;
+}
+
+function fallbackProductsList() {
+  const fallback = productsFallback as { products?: FallbackProduct[] };
+  return Array.isArray(fallback.products) ? fallback.products : [];
+}
+
+function staticProductFallback(targetPath: string) {
+  const products = fallbackProductsList();
+
+  if (targetPath.startsWith('products/barcode/')) {
+    const barcode = decodeURIComponent(targetPath.slice('products/barcode/'.length));
+    return products.find((product) => product.barcode === barcode) || null;
+  }
+
+  const productId = decodeURIComponent(targetPath.slice('products/'.length)).split('/')[0];
+  return products.find((product) => product.id === productId) || null;
 }
 
 function catalogGeneratedAt() {
@@ -201,11 +228,20 @@ function catalogProductUpdatedAt() {
     : undefined;
 }
 
-function withCatalogFreshness(stats: StatsResponse) {
+function withFallbackCatalogFreshness(stats: StatsResponse) {
   return {
     ...stats,
     catalog_updated_at: catalogGeneratedAt() || stats.catalog_updated_at || stats.timestamp,
     catalog_product_updated_at: catalogProductUpdatedAt() || stats.catalog_product_updated_at
+  };
+}
+
+function withUpstreamCatalogFreshness(stats: StatsResponse) {
+  const freshnessTimestamp = stats.catalog_updated_at || stats.catalog_product_updated_at || stats.timestamp;
+  return {
+    ...stats,
+    catalog_updated_at: stats.catalog_updated_at || freshnessTimestamp,
+    catalog_product_updated_at: stats.catalog_product_updated_at || freshnessTimestamp
   };
 }
 
@@ -283,7 +319,7 @@ export async function GET(
   const upstream = await fetchUpstream(url, { headers: upstreamHeaders() }, targetPath);
   if (upstream.ok) {
     const responseData = targetPath === 'meta/stats'
-      ? withCatalogFreshness(upstream.data as StatsResponse)
+      ? withUpstreamCatalogFreshness(upstream.data as StatsResponse)
       : upstream.data;
     cacheResponse(cacheKey, responseData);
     return jsonWithSource(responseData, undefined, 'upstream');

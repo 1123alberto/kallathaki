@@ -10,7 +10,7 @@ import {
     Check, Trash2
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { proxyGovAssetUrl, retailerLogoUrl } from '../lib/gov-assets';
+import { productPlaceholderUrl, proxyGovAssetUrl, retailerLogoUrl } from '../lib/gov-assets';
 
 const BarcodeScannerModal = dynamic(() => import('../components/BarcodeScannerModal'), { ssr: false });
 const EShopHelperModal = dynamic(() => import('../components/EShopHelperModal'), { ssr: false });
@@ -1863,7 +1863,7 @@ export default function KallathakiApp() {
                                         >
                                             <div className="flex items-center gap-3">
                                                 {cat.image_url ? (
-                                                    <img src={cat.image_url} alt="" className="w-6 h-6 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=40&q=80' }} />
+                                                    <img src={cat.image_url} alt="" className="w-6 h-6 rounded-lg object-cover" onError={(e) => { (e.target as HTMLImageElement).src = productPlaceholderUrl }} />
                                                 ) : (
                                                     <ShoppingBag className="w-5 h-5 text-slate-400" />
                                                 )}
@@ -2374,7 +2374,7 @@ export default function KallathakiApp() {
                                                                         src={prod.image_url} 
                                                                         alt={prod.name}
                                                                         className="max-h-full max-w-full object-contain mix-blend-multiply dark:mix-blend-normal group-hover:scale-105 transition duration-300"
-                                                                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80' }}
+                                                                        onError={(e) => { (e.target as HTMLImageElement).src = productPlaceholderUrl }}
                                                                     />
                                                                 </div>
 
@@ -3351,7 +3351,7 @@ export default function KallathakiApp() {
                             </div>
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                 <div className="h-48 bg-input-custom rounded-2xl flex items-center justify-center p-4">
-                                    <img src={selectedProduct.image_url} alt="" className="max-h-full max-w-full object-contain mix-blend-multiply dark:mix-blend-normal" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=200&q=80' }} />
+                                    <img src={selectedProduct.image_url} alt="" className="max-h-full max-w-full object-contain mix-blend-multiply dark:mix-blend-normal" onError={(e) => { (e.target as HTMLImageElement).src = productPlaceholderUrl }} />
                                 </div>
 
                                 <div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Heart, ShoppingBag, ShoppingBasket, Trash2, Share2, Store, Info, Trophy, PiggyBank, MapPin, RefreshCw, Check } from 'lucide-react';
-import { proxyGovAssetUrl, retailerLogoUrl } from '../lib/gov-assets';
+import { productPlaceholderUrl, proxyGovAssetUrl, retailerLogoUrl } from '../lib/gov-assets';
 
 interface PriceStat {
     min_price: number;
@@ -443,7 +443,7 @@ export default function FavoritesView({
                                                     src={proxyGovAssetUrl(prod.image_url)} 
                                                     alt="" 
                                                     className="max-h-full max-w-full object-contain"
-                                                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=40&q=80' }}
+                                                    onError={(e) => { (e.target as HTMLImageElement).src = productPlaceholderUrl }}
                                                 />
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -750,7 +750,7 @@ export default function FavoritesView({
                                                             src={proxyGovAssetUrl(prod.image_url)} 
                                                             alt="" 
                                                             className="max-h-full max-w-full object-contain"
-                                                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=40&q=80' }}
+                                                            onError={(e) => { (e.target as HTMLImageElement).src = productPlaceholderUrl }}
                                                         />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -818,7 +818,7 @@ export default function FavoritesView({
                                                     return (
                                                         <tr key={prod.id} className="border-b border-border-custom/50 hover:bg-input-custom transition">
                                                             <td className="py-3 px-4 flex items-center gap-3 min-w-[280px]">
-                                                                <img src={proxyGovAssetUrl(prod.image_url)} alt="" className="w-10 h-10 object-contain rounded bg-white" onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=40&q=80' }} />
+                                                                <img src={proxyGovAssetUrl(prod.image_url)} alt="" className="w-10 h-10 object-contain rounded bg-white" onError={(e) => { (e.target as HTMLImageElement).src = productPlaceholderUrl }} />
                                                                 <div>
                                                                     <span className="text-[10px] font-semibold text-indigo-500 block">{prod.brand}</span>
                                                                     <strong className="text-xs font-semibold text-slate-800 dark:text-slate-100">{prod.name}</strong>
