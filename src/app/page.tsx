@@ -7,7 +7,7 @@ import {
     X, Sparkles, ShoppingBag, ChevronRight, ChevronLeft, LayoutGrid,
     Store, Percent, Trophy, Info, RefreshCw, Menu, ShoppingBasket,
     MapPin, Camera, ShieldCheck, Clock3, UserCircle, AlertTriangle, ArrowLeft,
-    Check, Trash2
+    Check, Trash2, ChevronDown
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { productPlaceholderUrl, proxyGovAssetUrl, retailerLogoUrl } from '../lib/gov-assets';
@@ -722,6 +722,20 @@ export default function KallathakiApp() {
 
     const [isCategoryBrowserOpen, setIsCategoryBrowserOpen] = useState(false);
     const [categoryBrowserQuery, setCategoryBrowserQuery] = useState('');
+    const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+
+    const toggleCategoryExpansion = (catId: string) => {
+        setExpandedCategories(prev => ({
+            ...prev,
+            [catId]: !prev[catId]
+        }));
+    };
+
+    useEffect(() => {
+        if (!isCategoryBrowserOpen) {
+            setExpandedCategories({});
+        }
+    }, [isCategoryBrowserOpen]);
 
     const visibleCategoryGroups = useMemo(() => {
         const query = categoryBrowserQuery.trim().toLocaleLowerCase('el-GR');
@@ -1287,7 +1301,6 @@ export default function KallathakiApp() {
         return cheapest;
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const selectSubcategory = (e: React.MouseEvent, parentId: string, subId: string) => {
         e.stopPropagation();
         setCategoryPath([parentId, subId]);
@@ -3572,11 +3585,15 @@ export default function KallathakiApp() {
                                 ) : (
                                     visibleCategoryGroups.map((cat) => {
                                         const isActive = selectedCategoryId === cat.category_id;
+                                        const children = cat.children || [];
+                                        const isExpanded = !!expandedCategories[cat.category_id] || (!!categoryBrowserQuery && children.some(sub => 
+                                            [sub.name, sub.name_en].filter(Boolean).join(' ').toLocaleLowerCase('el-GR').includes(categoryBrowserQuery.trim().toLocaleLowerCase('el-GR'))
+                                        ));
 
                                         return (
-                                            <div key={cat.category_id} className="rounded-2xl border border-border-custom bg-card-bg overflow-hidden flex">
+                                            <div key={cat.category_id} className={`rounded-2xl border transition-all duration-300 bg-card-bg overflow-hidden flex flex-col ${isExpanded ? 'border-indigo-500/40 shadow-md col-span-1 sm:col-span-2' : 'border-border-custom hover:border-border-custom/80'}`}>
                                                 <button
-                                                    onClick={() => handleCategoryClick(cat.category_id)}
+                                                    onClick={() => toggleCategoryExpansion(cat.category_id)}
                                                     className={`w-full p-4 flex items-center gap-4 text-left transition ${isActive ? 'bg-indigo-500/10' : 'hover:bg-input-custom'}`}
                                                 >
                                                     <div className="w-12 h-12 rounded-xl bg-input-custom border border-border-custom overflow-hidden flex items-center justify-center shrink-0">
@@ -3592,8 +3609,45 @@ export default function KallathakiApp() {
                                                             {cat.total_product_count ? `${cat.total_product_count.toLocaleString('el-GR')} ${t('productCount')}` : t('viewProducts')}
                                                         </div>
                                                     </div>
-                                                    <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                                                    <div className="p-1 rounded-lg hover:bg-input-custom transition shrink-0">
+                                                        {isExpanded ? <ChevronDown className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
+                                                    </div>
                                                 </button>
+
+                                                {children.length > 0 && isExpanded && (
+                                                    <div className="px-4 pb-4 pt-1 border-t border-border-custom/50 bg-input-custom/30 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fadeIn">
+                                                        <button
+                                                            onClick={() => handleCategoryClick(cat.category_id)}
+                                                            className={`min-h-11 px-4 py-2.5 rounded-xl text-left text-xs font-black transition flex items-center justify-between gap-3 border ${
+                                                                isActive && !selectedSubcategoryId
+                                                                    ? 'bg-indigo-500 text-white border-transparent'
+                                                                    : 'bg-background border-border-custom hover:bg-indigo-500/10 hover:border-indigo-500/20 text-slate-700 dark:text-slate-200'
+                                                            }`}
+                                                        >
+                                                            <span>{language === 'en' ? 'All Products' : 'Όλα τα Προϊόντα'}</span>
+                                                            <span className="shrink-0 opacity-75">{cat.total_product_count || 0}</span>
+                                                        </button>
+
+                                                        {children.map((sub) => {
+                                                            const isSubActive = selectedSubcategoryId === sub.category_id;
+
+                                                            return (
+                                                                <button
+                                                                    key={sub.category_id}
+                                                                    onClick={(e) => selectSubcategory(e, cat.category_id, sub.category_id)}
+                                                                    className={`min-h-11 px-4 py-2.5 rounded-xl text-left text-xs font-bold transition flex items-center justify-between gap-3 border ${
+                                                                        isSubActive
+                                                                            ? 'bg-indigo-500 text-white border-transparent'
+                                                                            : 'bg-background border-border-custom hover:bg-indigo-500/10 hover:border-indigo-500/20 text-slate-650 dark:text-slate-350'
+                                                                    }`}
+                                                                >
+                                                                    <span className="truncate">{categoryName(sub)}</span>
+                                                                    <span className="shrink-0 opacity-75">{sub.total_product_count || 0}</span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
                                             </div>
                                         );
                                     })
