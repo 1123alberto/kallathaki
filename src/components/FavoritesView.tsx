@@ -424,7 +424,7 @@ export default function FavoritesView({
                                             key={prod.id}
                                             onClick={() => toggleBasketItem(prod.id)}
                                             className={`
-                                                relative p-4 rounded-xl border transition cursor-pointer flex items-center gap-3 select-none
+                                                relative p-3 rounded-xl border transition cursor-pointer flex items-center gap-3 select-none
                                                 ${isSelected 
                                                     ? 'bg-indigo-500/5 border-indigo-500/45 dark:border-indigo-500/30 shadow-sm' 
                                                     : 'bg-input-custom border-transparent opacity-60 hover:opacity-100'}
@@ -438,7 +438,7 @@ export default function FavoritesView({
                                                     className="w-4 h-4 rounded text-indigo-500 border-slate-300 focus:ring-indigo-500 pointer-events-none"
                                                 />
                                             </div>
-                                            <div className="flex items-center justify-center bg-white rounded p-1 w-10 h-10 border border-border-custom shrink-0">
+                                            <div className="flex items-center justify-center bg-white rounded p-1 w-16 h-16 border border-border-custom shrink-0">
                                                 <img 
                                                     src={proxyGovAssetUrl(prod.image_url)} 
                                                     alt="" 
@@ -448,7 +448,7 @@ export default function FavoritesView({
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <span className="text-[9px] font-bold text-indigo-500 block uppercase tracking-wider truncate">{prod.brand || copy.generic}</span>
-                                                <strong className="text-xs font-semibold text-slate-800 dark:text-slate-100 block line-clamp-2 leading-snug">{prod.name}</strong>
+                                                <strong className="text-xs font-semibold text-slate-800 dark:text-slate-100 block line-clamp-2 leading-snug h-9">{prod.name}</strong>
                                                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5">
                                                     {cheapest ? `${copy.from} €${cheapest.price.toFixed(2)}` : '-'}
                                                 </span>
@@ -743,9 +743,9 @@ export default function FavoritesView({
                                                 <div 
                                                     key={prod.id}
                                                     onClick={() => toggleBasketItem(prod.id)}
-                                                    className="relative p-4 rounded-xl border border-indigo-500/30 bg-indigo-500/5 transition cursor-pointer flex items-center gap-3 select-none hover:bg-indigo-500/10"
+                                                    className="relative p-3 rounded-xl border border-indigo-500/30 bg-indigo-500/5 transition cursor-pointer flex items-center gap-3 select-none hover:bg-indigo-500/10"
                                                 >
-                                                    <div className="flex items-center justify-center bg-white rounded p-1 w-10 h-10 border border-border-custom">
+                                                    <div className="flex items-center justify-center bg-white rounded p-1 w-16 h-16 border border-border-custom shrink-0">
                                                         <img 
                                                             src={proxyGovAssetUrl(prod.image_url)} 
                                                             alt="" 
@@ -755,7 +755,7 @@ export default function FavoritesView({
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <span className="text-[9px] font-bold text-indigo-500 block uppercase tracking-wider truncate">{prod.brand || copy.generic}</span>
-                                                        <strong className="text-xs font-semibold text-slate-800 dark:text-slate-100 block truncate">{prod.name}</strong>
+                                                        <strong className="text-xs font-semibold text-slate-800 dark:text-slate-100 block line-clamp-2 leading-snug h-9">{prod.name}</strong>
                                                         <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5">
                                                             {cheapest ? `${copy.from} €${cheapest.price.toFixed(2)}` : '-'}
                                                         </span>

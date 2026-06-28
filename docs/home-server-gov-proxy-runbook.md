@@ -244,3 +244,46 @@ After power returns:
    - upstream proxy health
 3. Consider a UPS for the Pi/router if stale-data periods during power cuts matter.
 4. Keep the app fallback snapshot logic intact as a resilience layer.
+
+
+
+• Steady-State Checklist
+
+  - Vercel GOV_API_URL should stay:
+    https://pi-plex-server.tail4c3661.ts.net
+
+  - Pi service should be running:
+    sudo systemctl status kallathaki-gov-proxy
+
+  - Funnel should be active:
+    sudo tailscale funnel status
+
+  Quick health checks
+
+  curl -i https://pi-plex-server.tail4c3661.ts.net/meta/stats
+
+  curl -i \
+    -H 'Content-Type: application/json' \
+    -X POST https://pi-plex-server.tail4c3661.ts.net/products/search \
+    --data '{"page":1,"page_size":2,"title":"γαλα"}'
+
+  curl -i \
+    -H 'cache-control: no-cache' \
+    -H 'x-kallathaki-refresh: 1' \
+    'https://kallathaki.gr/api/meta/stats?_refresh=1'
+
+  If power/internet goes down at home
+
+  - Vercel falls back to snapshot/stale cache
+  - when the Pi returns, live sync resumes automatically if:
+      - tailscaled starts
+      - kallathaki-gov-proxy starts
+      - Funnel config persists
+
+  Useful recovery commands on the Pi
+
+  sudo systemctl restart kallathaki-gov-proxy
+  sudo journalctl -u kallathaki-gov-proxy -n 100 --no-pager
+  sudo tailscale funnel status
+  sudo tailscale funnel reset
+  sudo tailscale funnel --bg 8081

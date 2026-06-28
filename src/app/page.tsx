@@ -1287,6 +1287,7 @@ export default function KallathakiApp() {
         return cheapest;
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const selectSubcategory = (e: React.MouseEvent, parentId: string, subId: string) => {
         e.stopPropagation();
         setCategoryPath([parentId, subId]);
@@ -3542,8 +3543,7 @@ export default function KallathakiApp() {
                                         onChange={(e) => setCategoryBrowserQuery(e.target.value)}
                                         placeholder={t('categorySearchPlaceholder')}
                                         aria-label={t('categorySearchPlaceholder')}
-                                        className="w-full pl-10 pr-10 py-3 text-sm bg-input-custom border border-transparent focus:border-indigo-500 focus:bg-background rounded-xl outline-none transition text-foreground"
-                                        autoFocus
+                                        className="w-full pl-10 pr-10 py-3 text-base bg-input-custom border border-transparent focus:border-indigo-500 focus:bg-background rounded-xl outline-none transition text-foreground"
                                     />
                                     {categoryBrowserQuery && (
                                         <button
@@ -3557,14 +3557,14 @@ export default function KallathakiApp() {
                                 </div>
                             </div>
 
-                            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
+                            <div className="flex-1 overflow-y-auto p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 gap-3 content-start">
                                 {loadingCategories ? (
-                                    <div className="h-40 flex items-center justify-center text-sm text-slate-500">
+                                    <div className="col-span-full h-40 flex items-center justify-center text-sm text-slate-500">
                                         <RefreshCw className="w-4 h-4 animate-spin mr-2 text-amber-500" />
                                         {t('loadingCategories')}
                                     </div>
                                 ) : visibleCategoryGroups.length === 0 ? (
-                                    <div className="h-40 flex flex-col items-center justify-center text-center">
+                                    <div className="col-span-full h-40 flex flex-col items-center justify-center text-center">
                                         <Search className="w-8 h-8 text-slate-400 mb-2" />
                                         <p className="text-sm font-bold text-slate-700 dark:text-slate-200">{t('noCategories')}</p>
                                         <p className="text-xs text-slate-500 mt-1">{t('tryGeneralTerm')}</p>
@@ -3572,10 +3572,9 @@ export default function KallathakiApp() {
                                 ) : (
                                     visibleCategoryGroups.map((cat) => {
                                         const isActive = selectedCategoryId === cat.category_id;
-                                        const children = cat.children || [];
 
                                         return (
-                                            <div key={cat.category_id} className="rounded-2xl border border-border-custom bg-card-bg overflow-hidden">
+                                            <div key={cat.category_id} className="rounded-2xl border border-border-custom bg-card-bg overflow-hidden flex">
                                                 <button
                                                     onClick={() => handleCategoryClick(cat.category_id)}
                                                     className={`w-full p-4 flex items-center gap-4 text-left transition ${isActive ? 'bg-indigo-500/10' : 'hover:bg-input-custom'}`}
@@ -3595,29 +3594,6 @@ export default function KallathakiApp() {
                                                     </div>
                                                     <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
                                                 </button>
-
-                                                {children.length > 0 && (
-                                                    <div className="px-3 pb-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                        {children.slice(0, categoryBrowserQuery ? 12 : 8).map((sub) => {
-                                                            const isSubActive = selectedSubcategoryId === sub.category_id;
-
-                                                            return (
-                                                                <button
-                                                                    key={sub.category_id}
-                                                                    onClick={(e) => selectSubcategory(e, cat.category_id, sub.category_id)}
-                                                                    className={`min-h-11 px-3 py-2 rounded-xl text-left text-xs font-bold transition flex items-center justify-between gap-3 ${
-                                                                        isSubActive
-                                                                            ? 'bg-indigo-500 text-white'
-                                                                            : 'bg-input-custom hover:bg-indigo-500/10 text-slate-650 dark:text-slate-300'
-                                                                    }`}
-                                                                >
-                                                                    <span className="truncate">{categoryName(sub)}</span>
-                                                                    <span className="shrink-0 opacity-75">{sub.total_product_count || 0}</span>
-                                                                </button>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
                                             </div>
                                         );
                                     })
