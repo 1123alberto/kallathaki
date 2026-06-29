@@ -790,6 +790,48 @@ export default function KallathakiApp() {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<{ destroy: () => void } | null>(null);
     const categorySectionRef = useRef<HTMLDivElement>(null);
+    const mainContentRef = useRef<HTMLDivElement>(null);
+    const scrollPositionsRef = useRef<Record<string, number>>({});
+    const isRestoringRef = useRef(false);
+
+    const currentNavigationKey = useMemo(() => {
+        if (searchTerm) return `search:${searchTerm}:page:${currentPage}`;
+        if (categoryPath.length === 0) return 'home';
+        return `category:${categoryPath.join('-')}:${showAllProductsInCategory ? 'all' : 'sub'}:page:${currentPage}`;
+    }, [categoryPath, searchTerm, showAllProductsInCategory, currentPage]);
+
+    useEffect(() => {
+        const mainEl = mainContentRef.current;
+        if (!mainEl) return;
+
+        const handleScroll = () => {
+            if (isRestoringRef.current) return;
+            scrollPositionsRef.current[currentNavigationKey] = mainEl.scrollTop;
+        };
+
+        mainEl.addEventListener('scroll', handleScroll, { passive: true });
+        return () => {
+            mainEl.removeEventListener('scroll', handleScroll);
+        };
+    }, [currentNavigationKey]);
+
+    useEffect(() => {
+        const mainEl = mainContentRef.current;
+        if (!mainEl) return;
+
+        const savedScroll = scrollPositionsRef.current[currentNavigationKey] || 0;
+        
+        isRestoringRef.current = true;
+        
+        const originalScrollBehavior = mainEl.style.scrollBehavior;
+        mainEl.style.scrollBehavior = 'auto';
+        mainEl.scrollTop = savedScroll;
+        
+        requestAnimationFrame(() => {
+            mainEl.style.scrollBehavior = originalScrollBehavior;
+            isRestoringRef.current = false;
+        });
+    }, [currentNavigationKey, loadingProducts]);
 
     // Initialize Theme and LocalStorage state
     useEffect(() => {
@@ -1248,6 +1290,7 @@ export default function KallathakiApp() {
 
 
     const handleCategoryClick = (catId: string) => {
+        setSearchTerm('');
         setCategoryPath([catId]);
         setShowAllProductsInCategory(false);
         setCurrentPage(1);
@@ -1269,6 +1312,7 @@ export default function KallathakiApp() {
                 steps.push({
                     name: categoryName(cat),
                     onClick: () => {
+                        setSearchTerm('');
                         setCategoryPath(snapshotPath);
                         setShowAllProductsInCategory(false);
                         setCurrentPage(1);
@@ -1303,6 +1347,7 @@ export default function KallathakiApp() {
 
     const selectSubcategory = (e: React.MouseEvent, parentId: string, subId: string) => {
         e.stopPropagation();
+        setSearchTerm('');
         setCategoryPath([parentId, subId]);
         setShowAllProductsInCategory(false);
         setCurrentPage(1);
@@ -1988,7 +2033,7 @@ export default function KallathakiApp() {
                     </header>
 
                     {/* Content Area */}
-                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6 transition-colors duration-300 scroll-smooth">
+                    <main ref={mainContentRef} className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 sm:pb-6 transition-colors duration-300 scroll-smooth">
                         {showFreshnessNotice && freshnessNoticeDate && (
                             <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/20">
                                 <div className="flex items-start gap-3">
@@ -2166,7 +2211,7 @@ export default function KallathakiApp() {
                                                 </h3>
                                                 <p className="text-sm text-slate-500 mt-1">{t('discoverByCategoryText')}</p>
                                             </div>
-                                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                            <div className="grid grid-cols-1 gap-3">
                                                 {categories.map((cat) => {
                                                     return (
                                                         <button
@@ -2287,7 +2332,7 @@ export default function KallathakiApp() {
                                                 </button>
                                             </div>
 
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                            <div className="grid grid-cols-2 gap-4">
                                                 {currentCategoryNode?.children?.map(sub => (
                                                     <div
                                                         key={sub.category_id}
@@ -2299,7 +2344,7 @@ export default function KallathakiApp() {
                                                         className="group bg-card-bg border border-border-custom hover:border-indigo-500/50 p-5 rounded-2xl shadow-sm hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition duration-300 cursor-pointer flex items-center justify-between"
                                                     >
                                                         <div className="min-w-0 pr-4">
-                                                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-500 transition truncate">
+                                                            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-500 transition">
                                                                 {categoryName(sub)}
                                                             </h4>
                                                             <p className="inline-flex mt-2 px-2.5 py-1 rounded-full bg-input-custom text-[10px] text-slate-650 dark:text-slate-300 font-bold">
@@ -3344,27 +3389,24 @@ export default function KallathakiApp() {
                 `}>
                     {selectedProduct && (
                         <>
-                            <div className="p-6 border-b border-border-custom flex items-center justify-between">
-                                <h3 className="text-base font-bold truncate max-w-[280px]">{selectedProduct.name}</h3>
-                                <div className="flex items-center gap-2">
+                            <div className="p-6 border-b border-border-custom flex items-center justify-end">
+                                <button className="p-2 hover:bg-input-custom text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 rounded-xl transition cursor-pointer" onClick={() => setIsDetailOpen(false)}>
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                <div className="relative h-48 bg-input-custom rounded-2xl flex items-center justify-center p-4">
                                     <button 
                                         onClick={(e) => toggleFavorite(e, selectedProduct)}
-                                        className={`p-2 rounded-xl transition cursor-pointer ${
+                                        className={`absolute top-3 right-3 p-3.5 z-20 rounded-full transition cursor-pointer shadow-sm border border-border-custom ${
                                             favorites.some(p => p.id === selectedProduct.id)
-                                                ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' 
-                                                : 'hover:bg-input-custom text-slate-450 hover:text-slate-650 dark:hover:text-slate-250 border border-transparent'
+                                                ? 'bg-rose-500/10 border-rose-500/20 text-rose-500' 
+                                                : 'bg-card-bg text-slate-400 hover:text-rose-500 border-transparent'
                                         }`}
                                         title={favorites.some(p => p.id === selectedProduct.id) ? 'Αφαίρεση από τα Αγαπημένα' : 'Προσθήκη στα Αγαπημένα'}
                                     >
                                         <Heart className={`w-4.5 h-4.5 ${favorites.some(p => p.id === selectedProduct.id) ? 'fill-current' : ''}`} />
                                     </button>
-                                    <button className="p-2 hover:bg-input-custom text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 rounded-xl transition cursor-pointer" onClick={() => setIsDetailOpen(false)}>
-                                        <X className="w-5 h-5" />
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                                <div className="h-48 bg-input-custom rounded-2xl flex items-center justify-center p-4">
                                     <img src={selectedProduct.image_url} alt="" className="max-h-full max-w-full object-contain mix-blend-multiply dark:mix-blend-normal" onError={(e) => { (e.target as HTMLImageElement).src = productPlaceholderUrl }} />
                                 </div>
 
